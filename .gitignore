@@ -1,0 +1,9 @@
+# Dataset files
+datasets/realblur/*
+
+# Original repo
+original_github_repo/
+
+# Pretrained models
+*.pth
+*.ckpt
