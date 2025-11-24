@@ -1,5 +1,6 @@
 # Dataset files
 datasets/realblur/*
+!datasets/realblur/download_utils.py
 
 # Original repo
 original_github_repo/
@@ -7,3 +8,9 @@ original_github_repo/
 # Pretrained models
 *.pth
 *.ckpt
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
