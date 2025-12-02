@@ -1,10 +1,14 @@
-Starting MLWNet (/home/bschen/deep_learning/final_project/pretrain_weights/realblur_j-width32.pth) Testing...
-Start Time: Sat Nov 22 22:21:00 2025
+>> Starting MLWNet Testing
+Start Time: Tue Dec  2 01:09:04 2025
 
-Image Size: (512, 512), Overlap: (128, 128)
+Current working directory: /home/bschen/Single-Image-Blind-Motion-Deblurring
+Model Weights Path: /home/bschen/Single-Image-Blind-Motion-Deblurring/pretrain_weights/realblur_j-width32.pth
+
+Image Size: (256, 256), Overlap: (0, 0)
 Show Image Indices: [3, 8, 18]
-Average PSNR: 30.51876 dB
-Average SSIM: 0.90256
+Average PSNR: 29.76702 dB
+Average SSIM: 0.89201
+Testing completed in 6.173 minutes.
 
-End Time: Sat Nov 22 22:24:47 2025
-Total Elapsed Time: 3.775 minutes
+End Time: Tue Dec  2 01:15:14 2025
+Total Elapsed Time: 6.173 minutes

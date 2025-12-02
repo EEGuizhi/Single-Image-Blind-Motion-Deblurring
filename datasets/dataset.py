@@ -17,6 +17,7 @@ from tqdm import tqdm
 from collections import OrderedDict
 
 import torch
+import torch.functional as F
 import albumentations as A
 from torch.utils.data import Dataset, DataLoader
 
@@ -36,6 +37,7 @@ class RealBlurDataset(Dataset):
     Args:
         split (str): 'train', 'val' or 'test'.
         img_type (str): 'J' for RealBlur-J, 'R' for RealBlur-R. Default: 'J'.
+        orig_size (bool): Whether to use original images size. Default: False.
         img_size (tuple[int, int]): Image size (H, W). Default: (256, 256).
         overlap (tuple[int, int]): Overlap size (H_overlap, W_overlap). Default: (0, 0).
         rand_crop (bool): Whether to use random cropping. Default: False.
@@ -46,6 +48,7 @@ class RealBlurDataset(Dataset):
         self,
         split:      str,
         img_type:   str             = 'J',
+        orig_size:  bool            = False,
         img_size:   tuple[int, int] = (256, 256),
         overlap:    tuple[int, int] = (0, 0),
         rand_crop:  bool            = False,
@@ -66,9 +69,10 @@ class RealBlurDataset(Dataset):
         self.root       = root
         self.split      = split
         self.img_type   = img_type
-        self.img_size   = img_size
-        self.rand_crop  = rand_crop
-        self.overlap    = overlap
+        self.orig_size  = orig_size
+        self.img_size   = img_size  if not orig_size else None
+        self.rand_crop  = rand_crop if not orig_size else False
+        self.overlap    = overlap   if not orig_size else (0, 0)
         self.transform  = transform
         self.cache_size = cache_size if cache_size and cache_size > 0 else 0
 
@@ -86,23 +90,29 @@ class RealBlurDataset(Dataset):
             blur_image_path = data["blur_image"]
             gt_image_path   = data["gt_image"]
 
-            # Split patch indexes
             h, w = data["height"], data["width"]
-            h_step, w_step = self.img_size[0] - self.overlap[0], self.img_size[1] - self.overlap[1]
-            h_indices = list(range(0, h - self.img_size[0] + 1, h_step))
-            w_indices = list(range(0, w - self.img_size[1] + 1, w_step))
-            if h_indices[-1] + self.img_size[0] < h:
-                h_indices.append(h - self.img_size[0])
-            if w_indices[-1] + self.img_size[1] < w:
-                w_indices.append(w - self.img_size[1])
+            if self.orig_size:
+                # Use original image size
+                # (path, (h_idx, w_idx), image_idx, n_patches)
+                self.blur_image_list.append((blur_image_path, [0, 0], idx, 1))
+                self.gt_image_list.append((gt_image_path, [0, 0], idx, 1))
+            else:
+                # Split patch indexes
+                h_step, w_step = self.img_size[0] - self.overlap[0], self.img_size[1] - self.overlap[1]
+                h_indices = list(range(0, h - self.img_size[0] + 1, h_step))
+                w_indices = list(range(0, w - self.img_size[1] + 1, w_step))
+                if h_indices[-1] + self.img_size[0] < h:
+                    h_indices.append(h - self.img_size[0])
+                if w_indices[-1] + self.img_size[1] < w:
+                    w_indices.append(w - self.img_size[1])
 
-            # Append patch image paths
-            n_patches = len(h_indices) * len(w_indices)
-            for h_idx in h_indices:
-                for w_idx in w_indices:
-                    # (path, (h_idx, w_idx), image_idx, n_patches)
-                    self.blur_image_list.append((blur_image_path, [h_idx, w_idx], idx, n_patches))
-                    self.gt_image_list.append((gt_image_path, [h_idx, w_idx], idx, n_patches))
+                # Append patch image paths
+                n_patches = len(h_indices) * len(w_indices)
+                for h_idx in h_indices:
+                    for w_idx in w_indices:
+                        # (path, (h_idx, w_idx), image_idx, n_patches)
+                        self.blur_image_list.append((blur_image_path, [h_idx, w_idx], idx, n_patches))
+                        self.gt_image_list.append((gt_image_path, [h_idx, w_idx], idx, n_patches))
 
         # Finish initialization
         print(f"[Dataset] RealBlurDataset initialized with {len(self.blur_image_list)} samples.\n")
@@ -138,17 +148,32 @@ class RealBlurDataset(Dataset):
         img_idx   = self.blur_image_list[index][2]
         n_patches = self.blur_image_list[index][3]
 
-        # Crop image patch
-        h_idx, w_idx = self.blur_image_list[index][1]
-        if self.rand_crop:
+        if self.orig_size:
+            # Use original image size
+            h_idx, w_idx = 0, 0
+        else:
             h, w = blur_img.shape[0], blur_img.shape[1]
-            if h_idx < h - self.img_size[0] and w_idx < w - self.img_size[1]:
-                h_bias = np.random.randint(0, self.img_size[0] - self.overlap[0])
-                w_bias = np.random.randint(0, self.img_size[1] - self.overlap[1])
-                h_idx += h_bias
-                w_idx += w_bias
-        blur_img = blur_img[h_idx:h_idx+self.img_size[0], w_idx:w_idx+self.img_size[1], :]
-        gt_img   = gt_img[h_idx:h_idx+self.img_size[0], w_idx:w_idx+self.img_size[1], :]
+            if h <= self.img_size[0] or w <= self.img_size[1]:
+                # Crop image patch
+                h_idx, w_idx = self.blur_image_list[index][1]
+                if self.rand_crop:
+                    if h_idx < h - self.img_size[0] and w_idx < w - self.img_size[1]:
+                        h_bias = np.random.randint(0, self.img_size[0] - self.overlap[0])
+                        w_bias = np.random.randint(0, self.img_size[1] - self.overlap[1])
+                        h_idx += h_bias
+                        w_idx += w_bias
+                blur_img = blur_img[h_idx:h_idx+self.img_size[0], w_idx:w_idx+self.img_size[1], :]
+                gt_img   = gt_img[h_idx:h_idx+self.img_size[0], w_idx:w_idx+self.img_size[1], :]
+            else:
+                pad_left, pad_top = (self.img_size[0] - h) // 2, (self.img_size[1] - w) // 2
+                pad_right = self.img_size[0] - h - pad_left
+                pad_bottom = self.img_size[1] - w - pad_top
+                blur_img = np.pad(blur_img, (
+                    (pad_left, pad_right), (pad_top, pad_bottom), (0, 0)
+                ), mode='constant', constant_values=0)
+                gt_img = np.pad(gt_img, (
+                    (pad_left, pad_right), (pad_top, pad_bottom), (0, 0)
+                ), mode='constant', constant_values=0)
 
         # Apply transformations
         blur_img = cv2.cvtColor(blur_img, cv2.COLOR_BGR2RGB)

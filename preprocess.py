@@ -17,11 +17,11 @@ from tqdm import tqdm
 
 import torch
 from torch.utils.data import Dataset, DataLoader
-from configs.config import ROOT_DIR
+from configs.config import DATASET_ROOT
 
 
 def prepare_realblur(
-    root: str = ROOT_DIR,
+    root: str = DATASET_ROOT,
     list_file: str = "RealBlur_J_train_list.txt"
     ) -> None:
     """Prepare images information for RealBlur Dataset
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     test_R_file  = "RealBlur_R_test_list.txt"
 
     # Prepare RealBlur dataset
-    prepare_realblur(root=ROOT_DIR, list_file=train_J_file)
-    prepare_realblur(root=ROOT_DIR, list_file=test_J_file)
-    prepare_realblur(root=ROOT_DIR, list_file=train_R_file)
-    prepare_realblur(root=ROOT_DIR, list_file=test_R_file)
+    prepare_realblur(root=DATASET_ROOT, list_file=train_J_file)
+    prepare_realblur(root=DATASET_ROOT, list_file=test_J_file)
+    prepare_realblur(root=DATASET_ROOT, list_file=train_R_file)
+    prepare_realblur(root=DATASET_ROOT, list_file=test_R_file)

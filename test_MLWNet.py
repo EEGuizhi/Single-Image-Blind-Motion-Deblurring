@@ -21,6 +21,7 @@ import torchvision
 from torch.utils.data import DataLoader, Dataset
 
 from configs.config import *
+from utils.misc import *
 from datasets.dataset import RealBlurDataset, custom_collate_fn
 from datasets.augmentation import RealBlurAugmentation
 from models.MLWNet import MLWNet_Local
@@ -138,20 +139,21 @@ def load_model(
 
 
 if __name__ == "__main__":
-    # Change execution directory to project root
-    os.chdir(ROOT_DIR)
-    print(f"Current working directory: {os.getcwd()}")
-    
+    # Log start
+    log = logger(TEST_RESULT_LOG)
+    log.print_log(f">> Starting MLWNet Testing")
+
     # Start timing
     start_time = time.time()
-    
-    # Log start
-    print("Starting MLWNet Testing...")
-    with open(TEST_RESULT_LOG, "w") as f:
-        f.write(f"Starting MLWNet ({MODEL_WEIGHTS_PATH}) Testing...\n")
-        f.write(f"Start Time: {time.ctime(start_time)}\n\n")
-        f.write(f"Image Size: {IMG_SIZE}, Overlap: {OVERLAP}\n")
-        f.write(f"Show Image Indices: {SHOW_IMAGE_INDICES}\n")
+    log.print_log(f"Start Time: {time.ctime(start_time)}\n")
+
+    # Change execution directory to project root
+    os.chdir(ROOT_DIR)
+    log.print_log(f"Current working directory: {os.getcwd()}")
+    log.print_log(f"Model Weights Path: {MODEL_WEIGHTS_PATH}\n")
+
+    log.print_log(f"Image Size: {IMG_SIZE}, Overlap: {OVERLAP}")
+    log.print_log(f"Show Image Indices: {SHOW_IMAGE_INDICES}")
 
     # Load dataset
     test_dataset = RealBlurDataset(
@@ -169,17 +171,14 @@ if __name__ == "__main__":
 
     # Run testing
     avg_psnr, avg_ssim = test(model, test_loader, DEVICE, SHOW_IMAGE_INDICES)
-    print(f"Average PSNR: {avg_psnr:.5f} dB")
-    print(f"Average SSIM: {avg_ssim:.5f}")
+    log.print_log(f"Average PSNR: {avg_psnr:.5f} dB")
+    log.print_log(f"Average SSIM: {avg_ssim:.5f}")
 
     # End timing
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Testing completed in {elapsed_time/60:.3f} minutes.")
+    log.print_log(f"Testing completed in {elapsed_time/60:.3f} minutes.\n")
 
     # Log results
-    with open(TEST_RESULT_LOG, "a") as f:
-        f.write(f"Average PSNR: {avg_psnr:.5f} dB\n")
-        f.write(f"Average SSIM: {avg_ssim:.5f}\n\n")
-        f.write(f"End Time: {time.ctime(end_time)}\n")
-        f.write(f"Total Elapsed Time: {elapsed_time/60:.3f} minutes\n")
+    log.print_log(f"End Time: {time.ctime(end_time)}")
+    log.print_log(f"Total Elapsed Time: {elapsed_time/60:.3f} minutes")
