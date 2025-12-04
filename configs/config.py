@@ -42,3 +42,4 @@ TRAIN_BATCH_SIZE = 2
 TEST_BATCH_SIZE = 1  # Must be 1 due to patch-wise testing
 MODEL_WEIGHTS_PATH = f"{ROOT_DIR}/pretrain_weights/realblur_j-width32.pth"
 TEST_RESULT_LOG = f"{OUTPUT_DIR}/test_results.txt"
+SUMMARY_LOG = f"{OUTPUT_DIR}/network_summary.txt"

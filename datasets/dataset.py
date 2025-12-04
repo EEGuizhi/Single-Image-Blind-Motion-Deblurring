@@ -145,6 +145,8 @@ class RealBlurDataset(Dataset):
     def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor, int]:
         # Load blur and ground-truth images
         blur_img, gt_img = self._load_image_pair(index)
+        blur_img  = cv2.cvtColor(blur_img, cv2.COLOR_BGR2RGB)
+        gt_img    = cv2.cvtColor(gt_img,   cv2.COLOR_BGR2RGB)
         img_idx   = self.blur_image_list[index][2]
         n_patches = self.blur_image_list[index][3]
 
@@ -153,31 +155,19 @@ class RealBlurDataset(Dataset):
             h_idx, w_idx = 0, 0
         else:
             h, w = blur_img.shape[0], blur_img.shape[1]
-            if h <= self.img_size[0] or w <= self.img_size[1]:
-                # Crop image patch
-                h_idx, w_idx = self.blur_image_list[index][1]
-                if self.rand_crop:
-                    if h_idx < h - self.img_size[0] and w_idx < w - self.img_size[1]:
-                        h_bias = np.random.randint(0, self.img_size[0] - self.overlap[0])
-                        w_bias = np.random.randint(0, self.img_size[1] - self.overlap[1])
-                        h_idx += h_bias
-                        w_idx += w_bias
-                blur_img = blur_img[h_idx:h_idx+self.img_size[0], w_idx:w_idx+self.img_size[1], :]
-                gt_img   = gt_img[h_idx:h_idx+self.img_size[0], w_idx:w_idx+self.img_size[1], :]
-            else:
-                pad_left, pad_top = (self.img_size[0] - h) // 2, (self.img_size[1] - w) // 2
-                pad_right = self.img_size[0] - h - pad_left
-                pad_bottom = self.img_size[1] - w - pad_top
-                blur_img = np.pad(blur_img, (
-                    (pad_left, pad_right), (pad_top, pad_bottom), (0, 0)
-                ), mode='constant', constant_values=0)
-                gt_img = np.pad(gt_img, (
-                    (pad_left, pad_right), (pad_top, pad_bottom), (0, 0)
-                ), mode='constant', constant_values=0)
+
+            # Crop image patch
+            h_idx, w_idx = self.blur_image_list[index][1]
+            if self.rand_crop:
+                if h_idx < h - self.img_size[0] and w_idx < w - self.img_size[1]:
+                    h_bias = np.random.randint(0, self.img_size[0] - self.overlap[0])
+                    w_bias = np.random.randint(0, self.img_size[1] - self.overlap[1])
+                    h_idx += h_bias
+                    w_idx += w_bias
+            blur_img = blur_img[h_idx:h_idx+self.img_size[0], w_idx:w_idx+self.img_size[1], :]
+            gt_img   = gt_img[h_idx:h_idx+self.img_size[0], w_idx:w_idx+self.img_size[1], :]
 
         # Apply transformations
-        blur_img = cv2.cvtColor(blur_img, cv2.COLOR_BGR2RGB)
-        gt_img   = cv2.cvtColor(gt_img,   cv2.COLOR_BGR2RGB)
         if self.transform is not None:
             blur_img, gt_img = self.transform(blur_img, gt_img)
 

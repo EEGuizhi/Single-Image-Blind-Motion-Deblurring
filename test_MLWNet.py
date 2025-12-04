@@ -17,6 +17,7 @@ import numpy as np
 from tqdm import tqdm
 
 import torch
+import torchinfo
 import torchvision
 from torch.utils.data import DataLoader, Dataset
 
@@ -182,3 +183,13 @@ if __name__ == "__main__":
     # Log results
     log.print_log(f"End Time: {time.ctime(end_time)}")
     log.print_log(f"Total Elapsed Time: {elapsed_time/60:.3f} minutes")
+
+    # Model summary
+    log.print_log("\n>> Model Summary:")
+    summary = torchinfo.summary(
+        model,
+        input_data=(torch.randn(1, 3, IMG_SIZE[0], IMG_SIZE[1]).to(DEVICE)),
+        col_names=["input_size", "output_size", "num_params", "trainable"],
+        depth=4,
+    )
+    log.print_log(summary)
