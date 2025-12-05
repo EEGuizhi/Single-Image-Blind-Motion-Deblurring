@@ -188,18 +188,3 @@ def custom_collate_fn(batch: list) -> tuple[torch.Tensor, torch.Tensor, torch.Te
     img_idxs  = torch.tensor([item[3] for item in batch], dtype=torch.long)
     n_patches = batch[0][4]  # All items have the same n_patches
     return blur_imgs, gt_imgs, start_pos, img_idxs, n_patches
-
-
-if __name__ == '__main__':
-    # # Testing the RealBlurDataset
-    # dataset = RealBlurDataset('train', 'J', (256, 256), DATASET_ROOT)
-    # dataloader = DataLoader(dataset, batch_size=4, shuffle=True, num_workers=4)
-
-    # for i, (img, mask) in enumerate(dataloader):
-    #     print(img.shape)
-    #     print(mask.shape)
-    #     if i == 2:
-    #         break
-
-    image = cv2.imread(f"{DATASET_ROOT}/RealBlur-J_ECC_IMCORR_centroid_itensity_ref/scene002/blur/blur_1.png")
-    print(image.shape)

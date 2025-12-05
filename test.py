@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Filename: test_MLWNet.py
+Filename: test.py
 Author: BSChen
 Description:
     NYCU IEE Deep Learning Final Project - Single Image Blind Motion Deblurring
@@ -17,26 +17,21 @@ import numpy as np
 from tqdm import tqdm
 
 import torch
-import torchinfo
 import torchvision
 from torch.utils.data import DataLoader, Dataset
 
+import models
 from configs.config import *
 from utils.misc import *
 from datasets.dataset import RealBlurDataset, custom_collate_fn
-from datasets.augmentation import RealBlurAugmentation
-from models.MLWNet import MLWNet_Local
-# from metrics.psnr_ssim import PSNR, SSIM  # original metrics
 from metrics.metric import *
 from utils.combine_patches import combine_patches_torch
-
-
-SHOW_IMAGE_INDICES = [3, 8, 18]  # Indices of images to save during testing
 
 
 def test(
     model: torch.nn.Module,
     test_loader: DataLoader,
+    img_size: tuple[int, int],
     device: torch.device,
     show_images: list[int]=None
     ) -> tuple[float, float]:
@@ -74,8 +69,8 @@ def test(
             # Collect patches for each image
             if prd_patches is None:
                 patches_cnt = 0
-                prd_patches = torch.zeros((n_patches, 3, IMG_SIZE[0], IMG_SIZE[1]), device=device)
-                tgt_patches = torch.zeros((n_patches, 3, IMG_SIZE[0], IMG_SIZE[1]), device=device)
+                prd_patches = torch.zeros((n_patches, 3, img_size[0], img_size[1]), device=device)
+                tgt_patches = torch.zeros((n_patches, 3, img_size[0], img_size[1]), device=device)
                 start_pos   = torch.zeros((n_patches, 2), dtype=torch.long, device=device)
 
             prd_patches[patches_cnt:patches_cnt + inputs.size(0)] = outputs.detach()
@@ -86,8 +81,8 @@ def test(
             # If all patches for the current image are collected, combine and evaluate
             if patches_cnt == n_patches:
                 full_image_size = (
-                    start_pos[-1, 0] + IMG_SIZE[0],
-                    start_pos[-1, 1] + IMG_SIZE[1]
+                    start_pos[-1, 0] + img_size[0],
+                    start_pos[-1, 1] + img_size[1]
                 )
                 combined_output = combine_patches_torch(prd_patches, full_image_size, start_pos)
                 combined_target = combine_patches_torch(tgt_patches, full_image_size, start_pos)
@@ -104,8 +99,9 @@ def test(
                     )
 
                 # Compute metrics
-                psnr = psnr_torch(combined_output, combined_target)
-                ssim = ssim_torch(combined_output, combined_target)
+                psnr, ssim = realblur_psnr_ssim_torch(
+                    combined_output.unsqueeze(0), combined_target.unsqueeze(0)
+                )
 
                 total_psnr += psnr
                 total_ssim += ssim
@@ -120,29 +116,28 @@ def test(
     return avg_psnr, avg_ssim
 
 
-def load_model(
-    model: torch.nn.Module,
-    weights_path: str,
-    device: torch.device
-    ) -> torch.nn.Module:
-    """Load model weights from a specified path.
-    Args:
-        model (torch.nn.Module): The model architecture.
-        weights_path (str): Path to the model weights file.
-        device (torch.device): Device to load the model onto (CPU or GPU).
-    Returns:
-        torch.nn.Module: The model with loaded weights.
-    """
-    state_dict = torch.load(weights_path, map_location=device)
-    model.load_state_dict(state_dict["params"])
-    model.to(device)
-    return model
-
-
 if __name__ == "__main__":
-    # Log start
-    log = logger(TEST_RESULT_LOG)
-    log.print_log(f">> Starting MLWNet Testing")
+    # Initialization
+    MODEL_NAME  = TEST_CONFIG["model_name"]
+    MODEL_DIM   = TEST_CONFIG["model_dim"]
+    WEIGHT_PATH = TEST_CONFIG["weights_path"]
+    BATCH_SIZE  = TEST_CONFIG["batch_size"]
+    IMG_SIZE    = TEST_CONFIG["patch_size"]
+    OVERLAP     = TEST_CONFIG["overlap"]
+    SHOW_IMAGES = TEST_CONFIG["show_image_indices"]
+    NUM_WORKERS = TEST_CONFIG["num_workers"]
+
+    # Logger setup
+    LOG_PATH = (
+        OUTPUT_DIR
+        + f"/report"
+        + f"_{MODEL_NAME}"
+        + f"_d{MODEL_DIM}"
+        + f"_{IMG_SIZE[0]}_{OVERLAP[0]}"
+        + ".txt"
+    )
+    log = logger(LOG_PATH)
+    log.print_log(f">> Starting Model Testing")
 
     # Start timing
     start_time = time.time()
@@ -151,10 +146,10 @@ if __name__ == "__main__":
     # Change execution directory to project root
     os.chdir(ROOT_DIR)
     log.print_log(f"Current working directory: {os.getcwd()}")
-    log.print_log(f"Model Weights Path: {MODEL_WEIGHTS_PATH}\n")
+    log.print_log(f"Model Weights Path: {WEIGHT_PATH}\n")
 
     log.print_log(f"Image Size: {IMG_SIZE}, Overlap: {OVERLAP}")
-    log.print_log(f"Show Image Indices: {SHOW_IMAGE_INDICES}")
+    log.print_log(f"Show Image Indices: {SHOW_IMAGES}")
 
     # Load dataset
     test_dataset = RealBlurDataset(
@@ -162,34 +157,24 @@ if __name__ == "__main__":
         overlap=OVERLAP, root=DATASET_ROOT, cache_size=CACHE_SIZE
     )
     test_loader = DataLoader(
-        test_dataset, batch_size=1, shuffle=False,
-        collate_fn=custom_collate_fn, num_workers=8
+        test_dataset, batch_size=BATCH_SIZE, shuffle=False,
+        collate_fn=custom_collate_fn, num_workers=NUM_WORKERS
     )
 
     # Load model
-    model = MLWNet_Local(dim=32 if "32" in MODEL_WEIGHTS_PATH else 64)
-    model = load_model(model, MODEL_WEIGHTS_PATH, DEVICE)
+    model = models.load_model(MODEL_NAME, dim=MODEL_DIM)
+    model = models.load_weights(model, WEIGHT_PATH)
+    model = model.to(DEVICE)
 
     # Run testing
-    avg_psnr, avg_ssim = test(model, test_loader, DEVICE, SHOW_IMAGE_INDICES)
+    avg_psnr, avg_ssim = test(model, test_loader, IMG_SIZE, DEVICE, SHOW_IMAGES)
     log.print_log(f"Average PSNR: {avg_psnr:.5f} dB")
     log.print_log(f"Average SSIM: {avg_ssim:.5f}")
 
     # End timing
     end_time = time.time()
     elapsed_time = end_time - start_time
-    log.print_log(f"Testing completed in {elapsed_time/60:.3f} minutes.\n")
 
     # Log results
     log.print_log(f"End Time: {time.ctime(end_time)}")
     log.print_log(f"Total Elapsed Time: {elapsed_time/60:.3f} minutes")
-
-    # Model summary
-    log.print_log("\n>> Model Summary:")
-    summary = torchinfo.summary(
-        model,
-        input_data=(torch.randn(1, 3, IMG_SIZE[0], IMG_SIZE[1]).to(DEVICE)),
-        col_names=["input_size", "output_size", "num_params", "trainable"],
-        depth=4,
-    )
-    log.print_log(summary)

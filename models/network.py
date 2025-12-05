@@ -506,9 +506,9 @@ class Network(nn.Module):
         self,
         in_channels: int = 3,
         out_channels: int = 3,
-        base_dim: int = 32,
+        dim: int = 32,
         expand_dim: float = 2.0,
-        aux_heads: bool = False
+        aux_heads: bool = True
     ) -> None:
         # Initialization
         super(Network, self).__init__()
@@ -516,19 +516,19 @@ class Network(nn.Module):
         # Modules
         self.embedding = FeatureEmbedding(
             in_channels=in_channels,
-            out_channels=base_dim,
+            out_channels=dim,
             kernel_size=3,
             stride=1,
             padding=1
         )
         self.encoder = Encoder(
-            dim=base_dim,
+            dim=dim,
             expand_dim=expand_dim,
             num_blocks=[1, 2, 4, 16]
         )
         self.decoder = Decoder(
             out_channels=out_channels,
-            dim=base_dim,
+            dim=dim,
             expand_dim=expand_dim,
             num_blocks=[2, 3, 4, 6],
             aux_heads=aux_heads
