@@ -39,13 +39,13 @@ TRAIN_CONFIG = {
     'model_name': 'Network',   # Options: 'MLWNet_Local', 'Network'
     'model_dim': 32,           # Options: 32, 64
     'patch_size': (256, 256),  # (H, W)
-    'overlap': (128, 128),     # (H_overlap, W_overlap)
+    'overlap': (64, 64),     # (H_overlap, W_overlap)
 
     'augmentation': True,
     'rand_crop': False,
     'num_epochs': 100,
-    'batch_size': 16,
-    'learning_rate': 1e-4,
+    'batch_size': 4,
+    'learning_rate': 1e-3,
 
     'optimizer': 'AdamW',
     'scheduler': 'ReduceLROnPlateau',
@@ -73,6 +73,6 @@ TEST_CONFIG = {
 # --------------------------------- Summary Configuration --------------------------------- #
 SUMMARY_CONFIG = {
     'model_name': 'Network',   # Options: 'MLWNet_Local', 'Network'
-    'model_dim': 32,           # Options: 32, 64
+    'model_dim': 64,           # Options: 32, 64
     'patch_size': (256, 256),  # (H, W)
 }

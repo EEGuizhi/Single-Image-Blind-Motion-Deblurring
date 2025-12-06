@@ -34,9 +34,10 @@ def load_checkpoint(
     path: str,
     model: nn.Module,
     optimizer: torch.optim.Optimizer,
-    scheduler: torch.optim.lr_scheduler._LRScheduler
+    scheduler: torch.optim.lr_scheduler._LRScheduler,
+    device: torch.device
 ) -> int:
-    checkpoint = torch.load(path)
+    checkpoint = torch.load(path, map_location=device)
     model.load_state_dict(checkpoint['params'])
     optimizer.load_state_dict(checkpoint['optimizer'])
     scheduler.load_state_dict(checkpoint['scheduler'])

@@ -46,11 +46,10 @@ class csv_logger:
                 "Epoch",
                 "Train Loss",
                 "Val Loss",
-                "Train PSNR",
                 "Val PSNR",
-                "Train SSIM",
                 "Val SSIM",
-                "Learning Rate"
+                "Learning Rate",
+                "Epoch Time"
             ]
         else:
             self.dict_keys = dict_keys
@@ -67,25 +66,21 @@ class csv_logger:
             epoch_dict (dict): Dictionary containing epoch information.
             logger_instance (logger): Logger instance for console logging.
         """
+        # Formulate
+        epoch_dict = {k.lower().replace(' ', '_'): v for k, v in epoch_dict.items()}
+
+        # Log to console
         if logger_instance is not None:
             logger_instance.print_log(
-                f"Epoch [{epoch_dict['epoch']}/{epoch_dict['num_epochs']}], "
-                f"Train Loss: {epoch_dict['train_loss']:.4f}, "
-                f"Val Loss: {epoch_dict['val_loss']:.4f}, "
-                f"LR: {epoch_dict['learning_rate']:.6f}, "
-                f"Val PSNR: {epoch_dict['val_psnr']:.2f}, "
-                f"Val SSIM: {epoch_dict['val_ssim']:.4f}"
+                f"Epoch [{epoch_dict['epoch']:3d}/{epoch_dict['num_epochs']:3d}]", end=' '
             )
+            for key in self.dict_keys:
+                k = key.lower().replace(' ', '_')
+                if k in epoch_dict:
+                    logger_instance.print_log(f"| {key}: {epoch_dict[k]:.6f}", end=' ')
+            logger_instance.print_log("")
 
+        # Log to CSV file
         with open(self.csv_file, 'a') as f:
             line = ','.join([str(epoch_dict[key.lower().replace(' ', '_')]) for key in self.dict_keys])
             f.write(line + '\n')
-
-
-def init_directory(dir_path: str) -> None:
-    """Create a directory if it does not exist.
-    Args:
-        dir_path (str): Path to the directory.
-    """
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)

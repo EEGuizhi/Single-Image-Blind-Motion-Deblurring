@@ -339,7 +339,7 @@ class Encoder(nn.Module):
     ) -> None:
         # Initialization
         super(Encoder, self).__init__()
-        dims = [round(dim * round(expand_dim ** i)) for i in range(len(num_blocks))]
+        dims = [round(dim * (expand_dim ** i)) for i in range(len(num_blocks))]
 
         # Stage 1
         self.fuse1 = nn.Sequential(*[
@@ -409,7 +409,7 @@ class Decoder(nn.Module):
         # Initialization
         super(Decoder, self).__init__()
         self.aux_heads = aux_heads
-        dims = [round(dim * round(expand_dim ** i)) for i in range(len(num_blocks))]
+        dims = [round(dim * (expand_dim ** i)) for i in range(len(num_blocks))]
 
         # Stage 4
         self.fuse4 = nn.Sequential(*[
@@ -458,7 +458,7 @@ class Decoder(nn.Module):
             self.aux_head4 = nn.Conv2d(dims[3], out_channels, kernel_size=3, padding=1)
             self.aux_head3 = nn.Conv2d(dims[2], out_channels, kernel_size=3, padding=1)
             self.aux_head2 = nn.Conv2d(dims[1], out_channels, kernel_size=3, padding=1)
-        self.head = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
+        self.head = nn.Conv2d(dims[0], out_channels, kernel_size=3, padding=1)
 
     def forward(
         self,
@@ -490,7 +490,7 @@ class Decoder(nn.Module):
         x1 = torch.cat([x1, x2], dim=1)
         x1 = self.ch_reduce1(x1)
         x1 = self.fuse1(x1)
-        out = self.head(x1) if self.aux_heads and self.training else None
+        out = self.head(x1)
 
         return out, aux2, aux3, aux4
 

@@ -87,4 +87,3 @@ class SIMOLoss(nn.Module):
         ).mean()
 
         return loss
-

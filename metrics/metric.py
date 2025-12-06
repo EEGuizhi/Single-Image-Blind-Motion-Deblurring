@@ -315,6 +315,11 @@ def mae_torch(
     return mae
 
 
+# ------------------------------------------------------------------------------ #
+# Metrics during training
+# ------------------------------------------------------------------------------ #
+
+
 def psnr_torch(
     img1: torch.Tensor,
     img2: torch.Tensor,
@@ -325,9 +330,9 @@ def psnr_torch(
 
     Args:
         img1 (torch.Tensor):
-            First image tensor.
+            First image tensor, shape (B, C, H, W).
         img2 (torch.Tensor):
-            Second image tensor.
+            Second image tensor, shape (B, C, H, W).
         data_range (float, optional):
             The data range of the input images (i.e., the difference between
             the maximum and minimum possible values). Default is 1.0.
@@ -343,8 +348,8 @@ def psnr_torch(
         )
 
     # Convert to float64 for higher precision
-    img1 = img1.detach().to(dtype=torch.float64, device="cpu")
-    img2 = img2.detach().to(dtype=torch.float64, device="cpu")
+    img1 = img1.detach()
+    img2 = img2.detach()
 
     # Mean Squared Error (MSE)
     mse = torch.mean((img1 - img2) ** 2).item()
@@ -357,7 +362,7 @@ def psnr_torch(
 def ssim_torch(
     img1: torch.Tensor,
     img2: torch.Tensor,
-    data_range: float = None,
+    data_range: float = 1.0,
     window_size: int = 11,
     sigma: float = 1.5,
     K: tuple[float, float] = (0.01, 0.03),
@@ -367,13 +372,12 @@ def ssim_torch(
 
     Args:
         img1 (torch.Tensor):
-            First image tensor of shape (H, W) or (C, H, W).
+            First image tensor of shape (H, W) or (C, H, W) or (B, C, H, W).
         img2 (torch.Tensor):
-            Second image tensor of shape (H, W) or (C, H, W).
+            Second image tensor of shape (H, W) or (C, H, W) or (B, C, H, W).
         data_range (float, optional):
             The data range of the input images (i.e., the difference between
-            the maximum and minimum possible values). If None, it is
-            determined from the input images.
+            the maximum and minimum possible values). Default is 1.0.
         window_size (int, optional):
             Size of the Gaussian window. Default is 11.
         sigma (float, optional):
@@ -396,37 +400,24 @@ def ssim_torch(
         # (C, H, W) -> (1, C, H, W)
         img1 = img1.unsqueeze(0)
         img2 = img2.unsqueeze(0)
-    else:
-        raise ValueError(f"Only supports 2D or 3D tensors, got dim={img1.dim()}.")
 
     # Convert to float64 for higher precision
     device = img1.device
-    img1 = img1.detach().to(dtype=torch.float64, device=device)
-    img2 = img2.detach().to(dtype=torch.float64, device=device)
+    img1 = img1.detach()
+    img2 = img2.detach()
 
-    _, C, H, W = img1.shape
+    B, C, H, W = img1.shape
     if window_size % 2 == 0:
         raise ValueError("window_size must be odd.")
     if window_size > min(H, W):
         raise ValueError(f"window_size ({window_size}) must be <= min(H, W) ({min(H, W)}).")
-
-    # Dynamic range estimation
-    if data_range is None:
-        max_val = torch.max(torch.stack([img1.max(), img2.max()])).item()
-        min_val = torch.min(torch.stack([img1.min(), img2.min()])).item()
-        data_range = max_val - min_val
-        if data_range <= 0:
-            # Use absolute max value as fallback
-            data_range = max(abs(max_val), abs(min_val))
-            if data_range == 0:
-                return 1.0  # Both images are constant and identical
 
     K1, K2 = K
     C1 = (K1 * data_range) ** 2
     C2 = (K2 * data_range) ** 2
 
     # Create Gaussian window
-    base_window = _gaussian_window(window_size, sigma, device=device, dtype=torch.float64)
+    base_window = _gaussian_window(window_size, sigma, device=device, dtype=img1.dtype)
     window = base_window.expand(C, 1, window_size, window_size)  # (C, 1, ws, ws)
 
     padding = window_size // 2
