@@ -1,5 +1,5 @@
 >> Starting Model Training
-Start Time: Sat Dec  6 18:33:08 2025
+Start Time: Sat Dec  6 20:01:12 2025
 
 Current working directory: /home/bschen/Single-Image-Blind-Motion-Deblurring
 >> Training Configuration:
@@ -9,7 +9,7 @@ Current working directory: /home/bschen/Single-Image-Blind-Motion-Deblurring
     - overlap: (64, 64)
     - augmentation: True
     - rand_crop: False
-    - num_epochs: 100
+    - num_epochs: 80
     - batch_size: 4
     - learning_rate: 0.001
     - optimizer: AdamW

@@ -116,9 +116,9 @@ def val_epoch(
             ssim = ssim_torch(outputs[0], targets)
 
             # Accumulate metrics
-            running_psnr += psnr.item()
-            running_ssim += ssim.item()
             total_loss += loss.item()
+            running_psnr += psnr
+            running_ssim += ssim
             num_batches += 1
 
     avg_loss = total_loss / num_batches
