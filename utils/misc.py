@@ -24,14 +24,14 @@ class logger:
             with open(self.log_file, 'w') as f:
                 f.write("")
 
-    def print_log(self, *message: str) -> None:
+    def print_log(self, *message: str, end: str = '\n') -> None:
         """Log a message to both console and the log file.
         Args:
             message (str): The message to log.
         """
-        print(*message)
+        print(*message, end=end)
         with open(self.log_file, 'a') as f:
-            print(*message, file=f)
+            print(*message, file=f, end=end)
 
 
 class csv_logger:
@@ -76,7 +76,7 @@ class csv_logger:
             )
             for key in self.dict_keys:
                 k = key.lower().replace(' ', '_')
-                if k in epoch_dict:
+                if k in epoch_dict and key not in ["Epoch", "Num Epochs"]:
                     logger_instance.print_log(f"| {key}: {epoch_dict[k]:.6f}", end=' ')
             logger_instance.print_log("")
 
@@ -84,3 +84,23 @@ class csv_logger:
         with open(self.csv_file, 'a') as f:
             line = ','.join([str(epoch_dict[key.lower().replace(' ', '_')]) for key in self.dict_keys])
             f.write(line + '\n')
+
+
+if __name__ == "__main__":
+    # Test logger
+    log = logger("test_log.txt", clear=True)
+    log.print_log("This is a test log message.")
+
+    # Test CSV logger
+    csv_log = csv_logger("test_log.csv", clear=True)
+    epoch_info = {
+        "Epoch": 1,
+        "Num Epochs": 10,
+        "Train Loss": 0.123456,
+        "Val Loss": 0.234567,
+        "Val PSNR": 30.123456,
+        "Val SSIM": 0.912345,
+        "Learning Rate": 0.001,
+        "Epoch Time": 120.5
+    }
+    csv_log.log_epoch(epoch_info, log)

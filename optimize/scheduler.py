@@ -32,7 +32,7 @@ class Scheduler:
         elif scheduler_name == 'ReduceLROnPlateau':
             mode = kwargs.get('mode', 'min')
             factor = kwargs.get('factor', 0.5)
-            patience = kwargs.get('patience', 7)
+            patience = kwargs.get('patience', 5)
             min_lr = kwargs.get('min_lr', 1e-6)
             return torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, mode=mode, factor=factor,

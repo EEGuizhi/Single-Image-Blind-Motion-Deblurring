@@ -1,5 +1,5 @@
 >> Starting Model Training
-Start Time: Sat Dec  6 20:01:12 2025
+Start Time: Sat Dec  6 21:56:48 2025
 
 Current working directory: /home/bschen/Single-Image-Blind-Motion-Deblurring
 >> Training Configuration:
@@ -21,4 +21,13 @@ Model initialized with 13685804 parameters
 Training on device: cuda
 
 No checkpoint provided, starting training from scratch.
+
+Epoch [  1/ 80] | Train Loss: -52.712987 | Val Loss: -54.301714 | Val PSNR: 28.683423 | Val SSIM: 0.829125 | Learning Rate: 0.001000 | Epoch Time: 3149.571694 
+>> Best model saved with PSNR: 28.68342 dB
+
+Epoch [  2/ 80] | Train Loss: -53.975592 | Val Loss: -55.284935 | Val PSNR: 29.104559 | Val SSIM: 0.840335 | Learning Rate: 0.001000 | Epoch Time: 3150.155679 
+>> Best model saved with PSNR: 29.10456 dB
+
+Epoch [  3/ 80] | Train Loss: -53.917754 | Val Loss: -55.509890 | Val PSNR: 29.374592 | Val SSIM: 0.848917 | Learning Rate: 0.001000 | Epoch Time: 3146.123271 
+>> Best model saved with PSNR: 29.37459 dB
 

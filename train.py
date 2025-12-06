@@ -161,7 +161,7 @@ def get_dataloaders(
     # Load testing dataset
     test_dataset = RealBlurDataset(
         split='test', img_type=IMG_TYPE, img_size=img_size,
-        overlap=overlap, root=DATASET_ROOT, cache_size=CACHE_SIZE
+        overlap=(0, 0), root=DATASET_ROOT, cache_size=CACHE_SIZE
     )
     test_loader = DataLoader(
         test_dataset, batch_size=1, shuffle=False,
@@ -207,6 +207,8 @@ if __name__ == "__main__":
     )
     log = logger(LOG_PATH, clear=not continue_training)
     csv_log = csv_logger(LOG_PATH.replace(".txt", ".csv"), clear=not continue_training)
+    if continue_training:
+        log.print_log("\n# " + '-'*33 + " Resuming Training " + '-'*33 + " #\n")
     log.print_log(f">> Starting Model Training")
 
     # Start timing
@@ -246,7 +248,7 @@ if __name__ == "__main__":
 
     # Load checkpoint if provided
     if continue_training:
-        start_epoch = load_checkpoint(
+        start_epoch = 1 + load_checkpoint(
             CHECKPOINT, model, optimizer, scheduler, DEVICE
         )
         log.print_log(f"Resumed training from checkpoint: {CHECKPOINT} at epoch {start_epoch}\n")
