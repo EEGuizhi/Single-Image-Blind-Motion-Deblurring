@@ -41,7 +41,8 @@ if __name__ == "__main__":
     # Load model
     model = models.load_model(
         SUMMARY_CONFIG["model_name"],
-        dim=SUMMARY_CONFIG["model_dim"]
+        dim=SUMMARY_CONFIG["model_dim"],
+        aux_heads=False,
     ).to(DEVICE)
 
     # Print model summary

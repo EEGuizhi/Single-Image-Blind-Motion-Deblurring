@@ -28,9 +28,13 @@ def load_model(model_name: str, **kwargs) -> nn.Module:
         nn.Module: Instantiated model.
     """
     if model_name == 'MLWNet_Local':
-        return MLWNet_Local(**kwargs)
+        dim = kwargs.get('model_dim', 32)
+        return MLWNet_Local(dim=dim)
     elif model_name == 'Network':
-        return Network(**kwargs)
+        dim = kwargs.get('model_dim', 32)
+        expand_dim = kwargs.get('expand_dim', 2)
+        aux_heads = kwargs.get('aux_heads', True)
+        return Network(dim=dim, expand_dim=expand_dim, aux_heads=aux_heads)
     else:
         raise ValueError(f"Model '{model_name}' is not recognized.")
 
@@ -44,5 +48,5 @@ def load_weights(model: nn.Module, weights_path: str) -> nn.Module:
         nn.Module: The model with loaded weights.
     """
     state_dict = torch.load(weights_path)
-    model.load_state_dict(state_dict["params"])
+    model.load_state_dict(state_dict["params"], strict=False)
     return model

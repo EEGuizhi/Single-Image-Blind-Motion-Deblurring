@@ -162,7 +162,7 @@ if __name__ == "__main__":
     )
 
     # Load model
-    model = models.load_model(MODEL_NAME, dim=MODEL_DIM)
+    model = models.load_model(MODEL_NAME, dim=MODEL_DIM, aux_heads=False)
     model = models.load_weights(model, WEIGHT_PATH)
     model = model.to(DEVICE)
 

@@ -469,21 +469,21 @@ class Decoder(nn.Module):
     ) -> torch.Tensor:
         # Stage 4
         x4 = self.fuse4(x4)
-        aux4 = self.aux_head4(x4) if self.aux_heads and self.training else None
+        aux4 = self.aux_head4(x4) if self.aux_heads else None
         x4 = self.up4(x4)
 
         # Stage 3
         x3 = torch.cat([x3, x4], dim=1)
         x3 = self.ch_reduce3(x3)
         x3 = self.fuse3(x3)
-        aux3 = self.aux_head3(x3) if self.aux_heads and self.training else None
+        aux3 = self.aux_head3(x3) if self.aux_heads else None
         x3 = self.up3(x3)
 
         # Stage 2
         x2 = torch.cat([x2, x3], dim=1)
         x2 = self.ch_reduce2(x2)
         x2 = self.fuse2(x2)
-        aux2 = self.aux_head2(x2) if self.aux_heads and self.training else None
+        aux2 = self.aux_head2(x2) if self.aux_heads else None
         x2 = self.up2(x2)
 
         # Stage 1

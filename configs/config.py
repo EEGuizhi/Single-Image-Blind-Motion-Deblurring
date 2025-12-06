@@ -30,7 +30,7 @@ TEST_R_FILE  = f"{DATASET_ROOT}/RealBlur_R_test_list.txt"
 IMG_TYPE = 'J'  # Options: 'J' for RealBlur-J, 'R' for RealBlur-R
 
 # DataLoader Settings
-CACHE_SIZE = 10
+CACHE_SIZE = 1000
 
 
 # ------------------------------- Training Configurations ------------------------------- #
@@ -43,7 +43,7 @@ TRAIN_CONFIG = {
 
     'augmentation': True,
     'rand_crop': False,
-    'num_epochs': 100,
+    'num_epochs': 80,
     'batch_size': 4,
     'learning_rate': 1e-3,
 

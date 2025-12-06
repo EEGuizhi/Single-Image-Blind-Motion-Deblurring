@@ -1,5 +1,5 @@
 >> Starting Model Training
-Start Time: Sat Dec  6 14:53:01 2025
+Start Time: Sat Dec  6 18:33:08 2025
 
 Current working directory: /home/bschen/Single-Image-Blind-Motion-Deblurring
 >> Training Configuration:

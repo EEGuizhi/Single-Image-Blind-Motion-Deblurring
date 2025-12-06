@@ -417,7 +417,7 @@ def ssim_torch(
     C2 = (K2 * data_range) ** 2
 
     # Create Gaussian window
-    base_window = _gaussian_window(window_size, sigma, device=device, dtype=img1.dtype)
+    base_window = _gaussian_window(window_size, sigma, device=device, dtype=img1.dtype, channels=1)
     window = base_window.expand(C, 1, window_size, window_size)  # (C, 1, ws, ws)
 
     padding = window_size // 2
