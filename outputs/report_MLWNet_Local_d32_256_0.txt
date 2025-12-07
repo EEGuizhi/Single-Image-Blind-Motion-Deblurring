@@ -8,5 +8,6 @@ Image Size: (256, 256), Overlap: (0, 0)
 Show Image Indices: [3, 8, 18]
 Average PSNR: 31.77125 dB
 Average SSIM: 0.92014
+
 End Time: Fri Dec  5 23:34:06 2025
 Total Elapsed Time: 18.251 minutes

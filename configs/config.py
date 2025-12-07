@@ -57,9 +57,10 @@ TRAIN_CONFIG = {
 
 # ------------------------------- Testing Configurations ------------------------------- #
 TEST_CONFIG = {
-    'model_name': 'MLWNet_Local',  # Options: 'MLWNet_Local', 'Network'
+    'model_name': 'Network',       # Options: 'MLWNet_Local', 'Network'
     'model_dim': 32,               # Options: 32, 64
-    'weights_path': f"{ROOT_DIR}/pretrain_weights/realblur_j-width32.pth",
+    # 'weights_path': f"{ROOT_DIR}/pretrain_weights/realblur_j-width32.pth",
+    'weights_path': f"{ROOT_DIR}/pretrain_weights/Network_d32.pth",
 
     'batch_size': 1,
     'patch_size': (512, 512),  # (H, W)

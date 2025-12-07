@@ -31,3 +31,47 @@ Epoch [  2/ 80] | Train Loss: -53.975592 | Val Loss: -55.284935 | Val PSNR: 29.1
 Epoch [  3/ 80] | Train Loss: -53.917754 | Val Loss: -55.509890 | Val PSNR: 29.374592 | Val SSIM: 0.848917 | Learning Rate: 0.001000 | Epoch Time: 3146.123271 
 >> Best model saved with PSNR: 29.37459 dB
 
+Epoch [  4/ 80] | Train Loss: -54.148283 | Val Loss: -55.801484 | Val PSNR: 29.439876 | Val SSIM: 0.856487 | Learning Rate: 0.001000 | Epoch Time: 3145.876244 
+>> Best model saved with PSNR: 29.43988 dB
+
+Epoch [  5/ 80] | Train Loss: -55.658307 | Val Loss: -54.435172 | Val PSNR: 28.792948 | Val SSIM: 0.838429 | Learning Rate: 0.001000 | Epoch Time: 3144.357569 
+Epoch [  6/ 80] | Train Loss: -54.491388 | Val Loss: -56.113033 | Val PSNR: 29.720925 | Val SSIM: 0.846689 | Learning Rate: 0.001000 | Epoch Time: 3141.097440 
+>> Best model saved with PSNR: 29.72092 dB
+
+Epoch [  7/ 80] | Train Loss: -56.463852 | Val Loss: -56.018366 | Val PSNR: 29.488386 | Val SSIM: 0.859957 | Learning Rate: 0.001000 | Epoch Time: 3146.163125 
+Epoch [  8/ 80] | Train Loss: -54.441827 | Val Loss: -56.719716 | Val PSNR: 29.860352 | Val SSIM: 0.858751 | Learning Rate: 0.001000 | Epoch Time: 3143.978801 
+>> Best model saved with PSNR: 29.86035 dB
+
+Epoch [  9/ 80] | Train Loss: -56.060353 | Val Loss: -57.076387 | Val PSNR: 30.107603 | Val SSIM: 0.866302 | Learning Rate: 0.001000 | Epoch Time: 3145.438620 
+>> Best model saved with PSNR: 30.10760 dB
+
+Epoch [ 10/ 80] | Train Loss: -55.663510 | Val Loss: -56.514114 | Val PSNR: 29.849005 | Val SSIM: 0.859856 | Learning Rate: 0.001000 | Epoch Time: 3141.842980 
+Epoch [ 11/ 80] | Train Loss: -57.130255 | Val Loss: -56.758884 | Val PSNR: 29.919726 | Val SSIM: 0.860778 | Learning Rate: 0.001000 | Epoch Time: 3144.525759 
+Epoch [ 12/ 80] | Train Loss: -55.820875 | Val Loss: -40.516701 | Val PSNR: 28.556873 | Val SSIM: 0.805025 | Learning Rate: 0.001000 | Epoch Time: 3142.162695 
+Epoch [ 13/ 80] | Train Loss: -57.343300 | Val Loss: -56.716092 | Val PSNR: 29.759420 | Val SSIM: 0.860933 | Learning Rate: 0.001000 | Epoch Time: 3144.397862 
+Epoch [ 14/ 80] | Train Loss: -57.246098 | Val Loss: -52.639472 | Val PSNR: 29.821298 | Val SSIM: 0.861583 | Learning Rate: 0.001000 | Epoch Time: 3148.297488 
+Epoch [ 15/ 80] | Train Loss: -57.368070 | Val Loss: -56.758995 | Val PSNR: 30.102715 | Val SSIM: 0.868090 | Learning Rate: 0.001000 | Epoch Time: 3148.580179 
+Epoch [ 16/ 80] | Train Loss: -57.790193 | Val Loss: -57.041436 | Val PSNR: 29.813963 | Val SSIM: 0.867965 | Learning Rate: 0.001000 | Epoch Time: 3149.911418 
+Epoch [ 17/ 80] | Train Loss: -57.703128 | Val Loss: -57.246829 | Val PSNR: 30.053878 | Val SSIM: 0.864091 | Learning Rate: 0.000500 | Epoch Time: 3145.924014 
+Epoch [ 18/ 80] | Train Loss: -60.103227 | Val Loss: -58.185616 | Val PSNR: 30.395781 | Val SSIM: 0.875132 | Learning Rate: 0.000500 | Epoch Time: 3147.717247 
+>> Best model saved with PSNR: 30.39578 dB
+
+Epoch [ 19/ 80] | Train Loss: -60.444095 | Val Loss: -58.021173 | Val PSNR: 30.363311 | Val SSIM: 0.873677 | Learning Rate: 0.000500 | Epoch Time: 3146.559875 
+Epoch [ 20/ 80] | Train Loss: -60.650951 | Val Loss: -58.118360 | Val PSNR: 30.467886 | Val SSIM: 0.876115 | Learning Rate: 0.000500 | Epoch Time: 3143.119317 
+>> Best model saved with PSNR: 30.46789 dB
+
+Epoch [ 21/ 80] | Train Loss: -60.841389 | Val Loss: -58.565291 | Val PSNR: 30.540198 | Val SSIM: 0.875696 | Learning Rate: 0.000500 | Epoch Time: 3144.618500 
+>> Best model saved with PSNR: 30.54020 dB
+
+Epoch [ 22/ 80] | Train Loss: -61.019232 | Val Loss: -58.236934 | Val PSNR: 30.425436 | Val SSIM: 0.874975 | Learning Rate: 0.000500 | Epoch Time: 3154.302861 
+Epoch [ 23/ 80] | Train Loss: -61.175563 | Val Loss: -58.327038 | Val PSNR: 30.459654 | Val SSIM: 0.874965 | Learning Rate: 0.000500 | Epoch Time: 3152.779692 
+Epoch [ 24/ 80] | Train Loss: -61.326595 | Val Loss: -58.377413 | Val PSNR: 30.509630 | Val SSIM: 0.875980 | Learning Rate: 0.000500 | Epoch Time: 3154.549862 
+Epoch [ 25/ 80] | Train Loss: -61.447792 | Val Loss: -58.244781 | Val PSNR: 30.507500 | Val SSIM: 0.875995 | Learning Rate: 0.000500 | Epoch Time: 3417.410257 
+Epoch [ 26/ 80] | Train Loss: -61.571455 | Val Loss: -58.477458 | Val PSNR: 30.517866 | Val SSIM: 0.877168 | Learning Rate: 0.000500 | Epoch Time: 3497.580137 
+Epoch [ 27/ 80] | Train Loss: -61.684987 | Val Loss: -58.063787 | Val PSNR: 30.402802 | Val SSIM: 0.872119 | Learning Rate: 0.000500 | Epoch Time: 3145.701319 
+Epoch [ 28/ 80] | Train Loss: -61.805532 | Val Loss: -58.264101 | Val PSNR: 30.564515 | Val SSIM: 0.877274 | Learning Rate: 0.000500 | Epoch Time: 3149.378782 
+>> Best model saved with PSNR: 30.56452 dB
+
+Epoch [ 29/ 80] | Train Loss: -61.913619 | Val Loss: -57.871986 | Val PSNR: 30.441398 | Val SSIM: 0.875514 | Learning Rate: 0.000500 | Epoch Time: 3147.816470 
+Epoch [ 30/ 80] | Train Loss: -62.025997 | Val Loss: -58.101818 | Val PSNR: 30.343526 | Val SSIM: 0.874124 | Learning Rate: 0.000500 | Epoch Time: 3152.822603 
+Epoch [ 31/ 80] | Train Loss: -62.110536 | Val Loss: -58.039464 | Val PSNR: 30.337968 | Val SSIM: 0.868439 | Learning Rate: 0.000500 | Epoch Time: 3415.893940 

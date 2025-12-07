@@ -176,5 +176,5 @@ if __name__ == "__main__":
     elapsed_time = end_time - start_time
 
     # Log results
-    log.print_log(f"End Time: {time.ctime(end_time)}")
+    log.print_log(f"\nEnd Time: {time.ctime(end_time)}")
     log.print_log(f"Total Elapsed Time: {elapsed_time/60:.3f} minutes")
