@@ -303,4 +303,4 @@ if __name__ == "__main__":
     # Log results
     log.print_log(f"End Time: {time.ctime(end_time)}")
     log.print_log(f"Total Elapsed Time: {elapsed_time/60:.3f} minutes")
-    log.print_log(f"Best {METRIC}: {best_eval:.5f}{" dB" if METRIC == 'PSNR' else ""}")
+    log.print_log(f"Best {METRIC}: {best_eval:.5f}{' dB' if METRIC == 'PSNR' else ''}")

@@ -9,7 +9,7 @@ Description:
     Group 25: 313510156, 313510217
 """
 
-from psnr import *
-from ssim import *
-from cw_ssim import *
-from test_metric import *
+from .psnr import *
+from .ssim import *
+from .cw_ssim import *
+from .test_metric import *
