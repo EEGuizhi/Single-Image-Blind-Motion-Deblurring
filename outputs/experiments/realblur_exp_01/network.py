@@ -524,13 +524,13 @@ class Network(nn.Module):
         self.encoder = Encoder(
             dim=dim,
             expand_dim=expand_dim,
-            num_blocks=[1, 2, 4, 24]
+            num_blocks=[1, 2, 4, 16]
         )
         self.decoder = Decoder(
             out_channels=out_channels,
             dim=dim,
             expand_dim=expand_dim,
-            num_blocks=[2, 4, 4, 6],
+            num_blocks=[2, 3, 4, 6],
             aux_heads=aux_heads
         )
 

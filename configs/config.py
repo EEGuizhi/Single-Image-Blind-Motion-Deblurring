@@ -34,12 +34,12 @@ CACHE_SIZE = 1000
 
 
 # ------------------------------- Training Configurations ------------------------------- #
-EXPERIMENT_DIR = f"{OUTPUT_DIR}/experiments/realblur_exp_01"
+EXPERIMENT_DIR = f"{OUTPUT_DIR}/experiments/realblur_exp_02"
 TRAIN_CONFIG = {
     'model_name': 'Network',   # Options: 'MLWNet_Local', 'Network'
     'model_dim': 32,           # Options: 32, 64
     'patch_size': (256, 256),  # (H, W)
-    'overlap': (64, 64),     # (H_overlap, W_overlap)
+    'overlap': (128, 128),     # (H_overlap, W_overlap)
 
     'augmentation': True,
     'rand_crop': False,
@@ -49,6 +49,7 @@ TRAIN_CONFIG = {
 
     'optimizer': 'AdamW',
     'scheduler': 'ReduceLROnPlateau',
+    'metric': 'SSIM',          # Options: 'PSNR', 'SSIM', 'CW-SSIM'
 
     'checkpoint': f"{EXPERIMENT_DIR}/Network_d32.pth",
     'num_workers': 8,
@@ -74,6 +75,6 @@ TEST_CONFIG = {
 # --------------------------------- Summary Configuration --------------------------------- #
 SUMMARY_CONFIG = {
     'model_name': 'Network',   # Options: 'MLWNet_Local', 'Network'
-    'model_dim': 64,           # Options: 32, 64
+    'model_dim': 32,           # Options: 32, 64
     'patch_size': (256, 256),  # (H, W)
 }

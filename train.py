@@ -27,7 +27,7 @@ from optimize import *
 from configs.config import *
 from datasets.dataset import RealBlurDataset, custom_collate_fn
 from datasets.augmentation import RealBlurAugmentation
-from metrics.metric import *
+from metrics import *
 from utils.misc import *
 from utils.checkpoint import *
 
@@ -184,6 +184,7 @@ if __name__ == "__main__":
     LR          = TRAIN_CONFIG["learning_rate"]
     OPTIMIZER   = TRAIN_CONFIG["optimizer"]
     SCHEDULER   = TRAIN_CONFIG["scheduler"]
+    METRIC      = TRAIN_CONFIG["metric"]
     CHECKPOINT  = TRAIN_CONFIG["checkpoint"]
     NUM_WORKERS = TRAIN_CONFIG["num_workers"]
 
@@ -257,7 +258,7 @@ if __name__ == "__main__":
         log.print_log("No checkpoint provided, starting training from scratch.\n")
 
     # ---------------------------------- Training loop ---------------------------------- #
-    best_psnr = 0.0
+    best_eval = 0.0
     for epoch in range(start_epoch, NUM_EPOCHS + 1):
         start_epoch_time = time.time()
         epoch_dict = {"epoch": epoch, "num_epochs": NUM_EPOCHS}
@@ -269,10 +270,15 @@ if __name__ == "__main__":
         # Validate for one epoch
         val_dict = val_epoch(model, test_loader, criterion, DEVICE)
         epoch_dict.update(val_dict)
-        val_psnr = val_dict["val_psnr"]
+        if METRIC == 'PSNR':
+            val_eval = val_dict["val_psnr"]
+        elif METRIC == 'SSIM':
+            val_eval = val_dict["val_ssim"]
+        else:
+            raise ValueError(f"Unsupported metric: {METRIC}")
 
         # Update learning rate
-        scheduler.step(val_psnr)
+        scheduler.step(val_eval)
 
         # Log epoch results
         end_epoch_time = time.time()
@@ -282,10 +288,11 @@ if __name__ == "__main__":
         csv_log.log_epoch(epoch_dict, log)
 
         # Save best model
-        if val_psnr > best_psnr:
-            best_psnr = val_psnr
-            save_checkpoint(CHECKPOINT, model, optimizer, scheduler, epoch)
-            log.print_log(f">> Best model saved with PSNR: {best_psnr:.5f} dB\n")
+        save_checkpoint(CHECKPOINT, model, optimizer, scheduler, epoch)
+        if val_eval > best_eval:
+            best_eval = val_eval
+            save_checkpoint(CHECKPOINT.replace(".pth", f"_best.pth"), model, optimizer, scheduler, epoch)
+            log.print_log(f">> Best model saved with PSNR: {best_eval:.5f} dB\n")
     # ----------------------------------------------------------------------------------- #
 
     # End timing
@@ -296,4 +303,4 @@ if __name__ == "__main__":
     # Log results
     log.print_log(f"End Time: {time.ctime(end_time)}")
     log.print_log(f"Total Elapsed Time: {elapsed_time/60:.3f} minutes")
-    log.print_log(f"Best PSNR: {best_psnr:.5f} dB")
+    log.print_log(f"Best {METRIC}: {best_eval:.5f}{" dB" if METRIC == 'PSNR' else ""}")
