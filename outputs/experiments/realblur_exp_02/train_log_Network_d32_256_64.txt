@@ -1,0 +1,28 @@
+
+# --------------------------------- Resuming Training --------------------------------- #
+
+>> Starting Model Training
+Start Time: Tue Dec  9 13:06:35 2025
+
+Current working directory: /home/bschen/Single-Image-Blind-Motion-Deblurring
+>> Training Configuration:
+    - model_name: Network
+    - model_dim: 32
+    - patch_size: (256, 256)
+    - overlap: (64, 64)
+    - augmentation: True
+    - rand_crop: True
+    - num_epochs: 80
+    - batch_size: 4
+    - learning_rate: 0.001
+    - optimizer: AdamW
+    - scheduler: ReduceLROnPlateau
+    - metric: SSIM
+    - checkpoint: /home/bschen/Single-Image-Blind-Motion-Deblurring/outputs/experiments/realblur_exp_02/Network_d32.pth
+    - num_workers: 8
+
+Model initialized with 17475180 parameters
+Training on device: cuda
+
+Resumed training from checkpoint at epoch 11
+

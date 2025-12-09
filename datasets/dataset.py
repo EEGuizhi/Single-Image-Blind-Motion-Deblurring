@@ -73,6 +73,10 @@ class RealBlurDataset(Dataset):
         self.img_size   = img_size  if not orig_size else None
         self.rand_crop  = rand_crop if not orig_size else False
         self.overlap    = overlap   if not orig_size else (0, 0)
+        self.step_size  = (
+            img_size[0] - overlap[0],
+            img_size[1] - overlap[1]
+        ) if not orig_size else None
         self.transform  = transform
         self.cache_size = cache_size if cache_size and cache_size > 0 else 0
 
@@ -98,7 +102,7 @@ class RealBlurDataset(Dataset):
                 self.gt_image_list.append((gt_image_path, [0, 0], idx, 1))
             else:
                 # Split patch indexes
-                h_step, w_step = self.img_size[0] - self.overlap[0], self.img_size[1] - self.overlap[1]
+                h_step, w_step = self.step_size
                 h_indices = list(range(0, h - self.img_size[0] + 1, h_step))
                 w_indices = list(range(0, w - self.img_size[1] + 1, w_step))
                 if h_indices[-1] + self.img_size[0] < h:
@@ -159,11 +163,12 @@ class RealBlurDataset(Dataset):
             # Crop image patch
             h_idx, w_idx = self.blur_image_list[index][1]
             if self.rand_crop:
-                if h_idx < h - self.img_size[0] and w_idx < w - self.img_size[1]:
-                    h_bias = np.random.randint(0, self.img_size[0] - self.overlap[0])
-                    w_bias = np.random.randint(0, self.img_size[1] - self.overlap[1])
-                    h_idx += h_bias
-                    w_idx += w_bias
+                h_bias = np.random.randint(-self.step_size[0] // 2, self.step_size[0] // 2 + 1)
+                w_bias = np.random.randint(-self.step_size[1] // 2, self.step_size[1] // 2 + 1)
+                h_idx += h_bias
+                w_idx += w_bias
+                h_idx = np.clip(h_idx, 0, h - self.img_size[0])
+                w_idx = np.clip(w_idx, 0, w - self.img_size[1])
             blur_img = blur_img[h_idx:h_idx+self.img_size[0], w_idx:w_idx+self.img_size[1], :]
             gt_img   = gt_img[h_idx:h_idx+self.img_size[0], w_idx:w_idx+self.img_size[1], :]
 

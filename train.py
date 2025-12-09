@@ -249,19 +249,20 @@ if __name__ == "__main__":
 
     # Load checkpoint if provided
     if continue_training:
-        start_epoch = 1 + load_checkpoint(
+        start_epoch, best_eval = load_checkpoint(
             CHECKPOINT, model, optimizer, scheduler, DEVICE
         )
-        log.print_log(f"Resumed training from checkpoint: {CHECKPOINT} at epoch {start_epoch}\n")
+        log.print_log(f"Resumed training from checkpoint at epoch {start_epoch}\n")
+        start_epoch += 1  # Start from the next epoch
     else:
         start_epoch = 1
+        best_eval = float('-inf')
         log.print_log("No checkpoint provided, starting training from scratch.\n")
 
     # ---------------------------------- Training loop ---------------------------------- #
-    best_eval = 0.0
     for epoch in range(start_epoch, NUM_EPOCHS + 1):
         start_epoch_time = time.time()
-        epoch_dict = {"epoch": epoch, "num_epochs": NUM_EPOCHS}
+        epoch_dict = {"epoch": epoch, "num_epochs": NUM_EPOCHS, 'best_eval': best_eval}
 
         # Train for one epoch
         train_dict = train_epoch(model, train_loader, criterion, optimizer, DEVICE)
@@ -292,7 +293,7 @@ if __name__ == "__main__":
         if val_eval > best_eval:
             best_eval = val_eval
             save_checkpoint(CHECKPOINT.replace(".pth", f"_best.pth"), model, optimizer, scheduler, epoch)
-            log.print_log(f">> Best model saved with PSNR: {best_eval:.5f} dB\n")
+            log.print_log(f">> Best model saved with {METRIC}: {best_eval:.5f}\n")
     # ----------------------------------------------------------------------------------- #
 
     # End timing
