@@ -289,10 +289,13 @@ if __name__ == "__main__":
         csv_log.log_epoch(epoch_dict, log)
 
         # Save best model
-        save_checkpoint(CHECKPOINT, model, optimizer, scheduler, epoch)
+        save_checkpoint(CHECKPOINT, epoch, best_eval, model, optimizer, scheduler)
         if val_eval > best_eval:
             best_eval = val_eval
-            save_checkpoint(CHECKPOINT.replace(".pth", f"_best.pth"), model, optimizer, scheduler, epoch)
+            save_checkpoint(
+                CHECKPOINT.replace(".pth", f"_best.pth"),
+                epoch, best_eval, model, optimizer, scheduler
+            )
             log.print_log(f">> Best model saved with {METRIC}: {best_eval:.5f}\n")
     # ----------------------------------------------------------------------------------- #
 
