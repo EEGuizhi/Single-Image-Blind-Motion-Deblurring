@@ -46,3 +46,51 @@ Epoch [  9/ 80] | Train Loss: -56.130389 | Val Loss: -53.467043 | Val PSNR: 29.9
 
 Epoch [ 10/ 80] | Train Loss: -57.022389 | Val Loss: -56.339912 | Val PSNR: 30.024531 | Val SSIM: 0.866743 | Learning Rate: 0.001000 | Epoch Time: 5376.681914 
 Epoch [ 11/ 80] | Train Loss: -57.474306 | Val Loss: -55.423036 | Val PSNR: 29.886930 | Val SSIM: 0.861610 | Learning Rate: 0.001000 | Epoch Time: 5385.702673 
+
+# --------------------------------- Resuming Training --------------------------------- #
+
+>> Starting Model Training
+Start Time: Tue Dec  9 14:17:17 2025
+
+Current working directory: /home/bschen/Single-Image-Blind-Motion-Deblurring
+>> Training Configuration:
+    - model_name: Network
+    - model_dim: 32
+    - patch_size: (256, 256)
+    - overlap: (64, 64)
+    - augmentation: True
+    - rand_crop: True
+    - num_epochs: 80
+    - batch_size: 4
+    - learning_rate: 0.001
+    - optimizer: AdamW
+    - scheduler: ReduceLROnPlateau
+    - metric: SSIM
+    - checkpoint: /home/bschen/Single-Image-Blind-Motion-Deblurring/outputs/experiments/realblur_exp_02/Network_d32.pth
+    - num_workers: 8
+
+Model initialized with 17475180 parameters
+Training on device: cuda
+
+Resumed training from checkpoint at epoch 11
+
+Epoch [ 12/ 80] | Train Loss: -58.361919 | Val Loss: -57.349244 | Val PSNR: 30.133232 | Val SSIM: 0.870962 | Learning Rate: 0.001000 | Epoch Time: 3808.371291 
+>> Best model saved with SSIM: 0.87096
+
+Epoch [ 13/ 80] | Train Loss: -57.973237 | Val Loss: -57.930641 | Val PSNR: 30.361890 | Val SSIM: 0.872840 | Learning Rate: 0.001000 | Epoch Time: 3811.401462 
+>> Best model saved with SSIM: 0.87284
+
+Epoch [ 14/ 80] | Train Loss: -58.449288 | Val Loss: -57.359264 | Val PSNR: 30.135529 | Val SSIM: 0.856722 | Learning Rate: 0.001000 | Epoch Time: 3815.434470 
+Epoch [ 15/ 80] | Train Loss: -56.933302 | Val Loss: -57.109770 | Val PSNR: 30.230067 | Val SSIM: 0.871401 | Learning Rate: 0.001000 | Epoch Time: 3807.679391 
+Epoch [ 16/ 80] | Train Loss: -58.736871 | Val Loss: -57.850207 | Val PSNR: 30.276282 | Val SSIM: 0.866407 | Learning Rate: 0.001000 | Epoch Time: 3812.152151 
+Epoch [ 17/ 80] | Train Loss: -58.763557 | Val Loss: -57.323092 | Val PSNR: 30.025293 | Val SSIM: 0.872382 | Learning Rate: 0.001000 | Epoch Time: 3808.082584 
+Epoch [ 18/ 80] | Train Loss: -58.977951 | Val Loss: -57.521993 | Val PSNR: 30.386756 | Val SSIM: 0.870731 | Learning Rate: 0.000500 | Epoch Time: 3810.264760 
+Epoch [ 19/ 80] | Train Loss: -60.527791 | Val Loss: -58.334804 | Val PSNR: 30.528555 | Val SSIM: 0.875550 | Learning Rate: 0.000500 | Epoch Time: 3805.676507 
+>> Best model saved with SSIM: 0.87555
+
+Epoch [ 20/ 80] | Train Loss: -60.698277 | Val Loss: -58.419954 | Val PSNR: 30.460737 | Val SSIM: 0.875701 | Learning Rate: 0.000500 | Epoch Time: 3809.736378 
+>> Best model saved with SSIM: 0.87570
+
+Epoch [ 21/ 80] | Train Loss: -60.816904 | Val Loss: -58.092094 | Val PSNR: 30.423693 | Val SSIM: 0.878662 | Learning Rate: 0.000500 | Epoch Time: 3811.409522 
+>> Best model saved with SSIM: 0.87866
+
