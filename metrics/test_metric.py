@@ -259,7 +259,7 @@ def realblur_psnr_ssim_torch(
         tar_np = gt[b].detach().cpu().permute(1, 2, 0).numpy().astype(np.float32)
 
         # start_time = time.time()
-        aligned_prd, aligned_tar, mask, _ = _image_align_np(prd_np, tar_np, n_iterations=30)
+        aligned_prd, aligned_tar, mask, _ = _image_align_np(prd_np, tar_np, n_iterations=50)
         # end_time = time.time()
         # print(f"Image alignment took {end_time - start_time:.4f} seconds")
 
