@@ -1,0 +1,5 @@
+Change:
+    相較於 Exp03 將 SIMO Loss 的權重改為 1, 0.1, 0.05, 0.01
+
+Result:
+    結果收斂更慢。

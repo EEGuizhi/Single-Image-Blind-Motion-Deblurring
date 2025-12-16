@@ -387,80 +387,13 @@ class Bridge(nn.Module):
     def __init__(
         self,
         dim: int,
-        expand_dim: float = 2.0,
         num_blocks: list = [0, 2, 2, 0],
     ) -> None:
         # Initialization
         super(Bridge, self).__init__()
-        assert len(num_blocks) == 4, "num_blocks must have four elements."
-        assert num_blocks[-1] == 0, "The last element of num_blocks must be zero."
-        dims = [round(dim * (expand_dim ** i)) for i in range(len(num_blocks))]
 
-        # Stage 4
-        self.up4 = nn.Sequential(
-            nn.Conv2d(dims[3], dims[3], kernel_size=3, padding=1, groups=dims[3]),
-            nn.Conv2d(dims[3], dims[2] * 4, kernel_size=1),
-            nn.PixelShuffle(2)
-        )
-
-        # Stage 3
-        self.ch_reduce3 = nn.Conv2d(dims[2] * 2, dims[2], kernel_size=1)
-        self.fuse3 = nn.Sequential(*[
-            DecoderBlock(dims[2], dims[2], dilations=[1, 2], expand_conv=2, expand_ffn=2)
-            for _ in range(num_blocks[2])
-        ])
-        self.up3 = nn.Sequential(
-            nn.Conv2d(dims[2], dims[2], kernel_size=3, padding=1, groups=dims[2]),
-            nn.Conv2d(dims[2], dims[1] * 4, kernel_size=1),
-            nn.PixelShuffle(2)
-        )
-
-        # Stage 2
-        self.ch_reduce2 = nn.Conv2d(dims[1] * 2, dims[1], kernel_size=1)
-        self.fuse2 = nn.Sequential(*[
-            DecoderBlock(dims[1], dims[1], dilations=[1, 2], expand_conv=2, expand_ffn=2)
-            for _ in range(num_blocks[1])
-        ])
-        self.up2 = nn.Sequential(
-            nn.Conv2d(dims[1], dims[1], kernel_size=3, padding=1, groups=dims[1]),
-            nn.Conv2d(dims[1], dims[0] * 4, kernel_size=1),
-            nn.PixelShuffle(2)
-        )
-
-        # Stage 1
-        self.ch_reduce1 = nn.Conv2d(dims[0] * 2, dims[0], kernel_size=1)
-        self.fuse1 = nn.Sequential(*[
-            DecoderBlock(dims[0], dims[0], dilations=[1, 2], expand_conv=2, expand_ffn=2)
-            for _ in range(num_blocks[0])
-        ]) if num_blocks[0] > 0 else nn.Identity()
-
-    def forward(
-        self,
-        x1: torch.Tensor,
-        x2: torch.Tensor,
-        x3: torch.Tensor,
-        x4: torch.Tensor
-    ) -> torch.Tensor:
-        # Stage 4
-        x = self.up4(x4)
-        
-        # Stage 3
-        x3 = torch.cat([x3, x], dim=1)
-        x3 = self.ch_reduce3(x3)
-        x3 = self.fuse3(x3)
-        x = self.up3(x3)
-        
-        # Stage 2
-        x2 = torch.cat([x2, x], dim=1)
-        x2 = self.ch_reduce2(x2)
-        x2 = self.fuse2(x2)
-        x = self.up2(x2)
-        
-        # Stage 1
-        x1 = torch.cat([x1, x], dim=1)
-        x1 = self.ch_reduce1(x1)
-        x1 = self.fuse1(x1)
-        return x1, x2, x3, x4
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        pass
 
 
 class Decoder(nn.Module):
@@ -575,8 +508,7 @@ class Network(nn.Module):
         out_channels: int = 3,
         dim: int = 32,
         expand_dim: float = 2.0,
-        aux_heads: bool = True,
-        use_bridge: bool = True
+        aux_heads: bool = True
     ) -> None:
         # Initialization
         super(Network, self).__init__()
@@ -594,23 +526,16 @@ class Network(nn.Module):
             expand_dim=expand_dim,
             num_blocks=[1, 2, 4, 24]
         )
-        self.bridge = Bridge(
-            dim=dim,
-            expand_dim=expand_dim,
-            num_blocks=[0, 2, 2, 0]
-        ) if use_bridge else None
         self.decoder = Decoder(
             out_channels=out_channels,
             dim=dim,
             expand_dim=expand_dim,
-            num_blocks=[2, 3, 4, 6],
+            num_blocks=[2, 4, 4, 6],
             aux_heads=aux_heads
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.embedding(x)
         x1, x2, x3, x4 = self.encoder(x)
-        if self.bridge is not None:
-            x1, x2, x3, x4 = self.bridge(x1, x2, x3, x4)
         x1, x2, x3, x4 = self.decoder(x1, x2, x3, x4)
         return x1, x2, x3, x4

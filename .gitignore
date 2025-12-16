@@ -1,6 +1,8 @@
 # Dataset files
 datasets/realblur/*
 !datasets/realblur/download_utils.py
+datasets/gopro/*
+!datasets/gopro/download_utils.py
 
 # Original repo
 original_github_repo/

@@ -34,7 +34,7 @@ CACHE_SIZE = 1000
 
 
 # ------------------------------- Training Configurations ------------------------------- #
-EXPERIMENT_DIR = f"{OUTPUT_DIR}/experiments/realblur_exp_05"
+EXPERIMENT_DIR = f"{OUTPUT_DIR}/experiments/realblur_exp_04"
 TRAIN_CONFIG = {
     'model_name': 'Network',   # Options: 'MLWNet_Local', 'Network'
     'model_dim': 64,           # Options: 32, 64
@@ -44,7 +44,7 @@ TRAIN_CONFIG = {
     'augmentation': True,
     'rand_crop': True,
     'num_epochs': 80,
-    'batch_size': 4,
+    'batch_size': 8,
     'learning_rate': 1e-3,
 
     'optimizer': 'AdamW',

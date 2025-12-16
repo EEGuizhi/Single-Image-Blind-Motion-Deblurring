@@ -1,0 +1,7 @@
+Change:
+    - 相較於 Exp01，將 num_blocks 做了改動使網路更深。
+    - 原本想用 overlap = 128 進行訓練，但是 patches 太多、單 Epoch 訓練太久，改回 overlap = 64。
+    - 最後加上垂直翻轉的 Augmentation，準確率有提升效果。
+
+Result:
+    結果較好。

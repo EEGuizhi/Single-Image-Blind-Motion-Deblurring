@@ -1,0 +1,5 @@
+Change:
+    - 加上 Bridge module，對應 MLWNet 的 Fusion 區塊。
+    - 保留水平與垂直翻轉，並將 45 degree 隨機旋轉改為 90 degree 隨機旋轉。
+
+Result:

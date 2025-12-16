@@ -29,7 +29,7 @@ class RealBlurAugmentation:
             # ----------------- Geometry Transforms ----------------- #
             A.HorizontalFlip(p=0.5),
             A.VerticalFlip(p=0.5),
-            # A.SafeRotate(limit=15, p=0.5),
+            A.SafeRotate(limit=90, p=0.5),
             # A.RandomResizedCrop(
             #     size=(img_size[0], img_size[1]),
             #     scale=(0.9, 1.0), ratio=(2.0, 2.0), p=0.5

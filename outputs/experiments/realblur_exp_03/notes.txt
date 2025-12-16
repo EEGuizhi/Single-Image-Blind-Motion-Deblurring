@@ -1,0 +1,6 @@
+Change:
+    - 相較於 Exp02，將 Batch size 從 4 調整為 8，將模型大小 dim = 32 調整為 dim = 64。
+    - 除了水平與垂直翻轉以外，還加上 45 degree 隨機旋轉。
+
+Result:
+    準確率稍微提升。

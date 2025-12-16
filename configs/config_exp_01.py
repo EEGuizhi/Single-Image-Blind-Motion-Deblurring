@@ -34,7 +34,7 @@ CACHE_SIZE = 1000
 
 
 # ------------------------------- Training Configurations ------------------------------- #
-EXPERIMENT_DIR = f"{OUTPUT_DIR}/experiments/realblur_exp_05"
+EXPERIMENT_DIR = f"{OUTPUT_DIR}/experiments/realblur_exp_04"
 TRAIN_CONFIG = {
     'model_name': 'Network',   # Options: 'MLWNet_Local', 'Network'
     'model_dim': 64,           # Options: 32, 64
@@ -59,9 +59,8 @@ TRAIN_CONFIG = {
 # ------------------------------- Testing Configurations ------------------------------- #
 TEST_CONFIG = {
     'model_name': 'Network',       # Options: 'MLWNet_Local', 'Network'
-    'model_dim': 64,               # Options: 32, 64
-    # 'weights_path': f"{ROOT_DIR}/pretrain_weights/realblur_j-width32.pth",
-    'weights_path': f"{ROOT_DIR}/pretrain_weights/Network_d64.pth",
+    'model_dim': 32,               # Options: 32, 64
+    'weights_path': f"{ROOT_DIR}/pretrain_weights/Network_d32.pth",
 
     'batch_size': 1,
     'patch_size': (512, 512),  # (H, W)
@@ -75,6 +74,6 @@ TEST_CONFIG = {
 # --------------------------------- Summary Configuration --------------------------------- #
 SUMMARY_CONFIG = {
     'model_name': 'Network',   # Options: 'MLWNet_Local', 'Network'
-    'model_dim': 64,           # Options: 32, 64
+    'model_dim': 32,           # Options: 32, 64
     'patch_size': (256, 256),  # (H, W)
 }
