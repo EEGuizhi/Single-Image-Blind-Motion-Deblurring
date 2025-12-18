@@ -37,7 +37,8 @@ def train_epoch(
     train_loader: DataLoader,
     criterion: nn.Module,
     optimizer: optim.Optimizer,
-    device: torch.device
+    device: torch.device,
+    scheduler: optim.lr_scheduler._LRScheduler = None
 ) -> dict:
     """Training loop for one epoch.
     Args:
@@ -46,6 +47,7 @@ def train_epoch(
         criterion (nn.Module): Loss function.
         optimizer (optim.Optimizer): Optimizer.
         device (torch.device): Device to run training on (CPU or GPU).
+        scheduler (optim.lr_scheduler._LRScheduler, optional): Learning rate scheduler. Defaults to None.
     Returns:
         dict: Dictionary containing information about the epoch.
     """
@@ -65,11 +67,15 @@ def train_epoch(
 
             # Compute loss
             loss = criterion(outputs, targets)
+            if MODEL_NAME == 'MLWNet':
+                loss += model.get_wavelet_loss()
             pbar.set_postfix({"loss": loss.item()})
 
             # Backward pass and optimize
             loss.backward()
             optimizer.step()
+            if scheduler is not None:
+                scheduler.step()
 
             total_loss += loss.item()
             num_batches += 1
@@ -100,26 +106,28 @@ def val_epoch(
     num_batches = 0
 
     with torch.no_grad():
-        for batch_data in tqdm(val_loader, desc=f"Validating", unit="batch"):
-            # Prepare data
-            inputs = batch_data[0].to(device)
-            targets = batch_data[1].to(device)
+        with tqdm(val_loader, desc=f"Validating", unit="batch") as pbar:
+            for batch_data in pbar:
+                # Prepare data
+                inputs = batch_data[0].to(device)
+                targets = batch_data[1].to(device)
 
-            # Forward pass
-            outputs = model(inputs)
+                # Forward pass
+                outputs = model(inputs)
 
-            # Compute loss
-            loss = criterion(outputs, targets)
+                # Compute loss
+                loss = criterion(outputs, targets)
+                pbar.set_postfix({"loss": loss.item()})
 
-            # Compute PSNR and SSIM
-            psnr = psnr_torch(outputs[0], targets)
-            ssim = ssim_torch(outputs[0], targets)
+                # Compute PSNR and SSIM
+                psnr = psnr_torch(outputs[0], targets)
+                ssim = ssim_torch(outputs[0], targets)
 
-            # Accumulate metrics
-            total_loss += loss.item()
-            running_psnr += psnr
-            running_ssim += ssim
-            num_batches += 1
+                # Accumulate metrics
+                total_loss += loss.item()
+                running_psnr += psnr
+                running_ssim += ssim
+                num_batches += 1
 
     avg_loss = total_loss / num_batches
     avg_psnr = running_psnr / num_batches
@@ -265,12 +273,24 @@ if __name__ == "__main__":
         epoch_dict = {"epoch": epoch, "num_epochs": NUM_EPOCHS, 'best_eval': best_eval}
 
         # Train for one epoch
-        train_dict = train_epoch(model, train_loader, criterion, optimizer, DEVICE)
+        train_dict = train_epoch(
+            model,
+            train_loader,
+            criterion,
+            optimizer,
+            DEVICE,
+            scheduler if SCHEDULER != 'ReduceLROnPlateau' else None
+        )
         epoch_dict.update(train_dict)
 
         # Validate for one epoch
-        val_dict = val_epoch(model, test_loader, criterion, DEVICE)
+        if epoch % 15 == 0 or epoch == 1 or epoch == NUM_EPOCHS:
+            # Update val_dict
+            val_dict = val_epoch(model, test_loader, criterion, DEVICE)
+        else:
+            pass
         epoch_dict.update(val_dict)
+
         if METRIC == 'PSNR':
             val_eval = val_dict["val_psnr"]
         elif METRIC == 'SSIM':
@@ -279,7 +299,8 @@ if __name__ == "__main__":
             raise ValueError(f"Unsupported metric: {METRIC}")
 
         # Update learning rate
-        scheduler.step(val_eval)
+        if SCHEDULER == 'ReduceLROnPlateau':
+            scheduler.step(val_eval)
 
         # Log epoch results
         end_epoch_time = time.time()

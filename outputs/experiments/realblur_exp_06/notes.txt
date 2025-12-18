@@ -1,0 +1,6 @@
+Change:
+    - 改寫 dataset.py，每個 Epoch 每張圖片只會取一個 Patch。
+    - 使用 MLWNet (dim = 32) 進行訓練。
+
+Result:
+    

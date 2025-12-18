@@ -385,8 +385,9 @@ class Fusion(nn.Module):
     def get_wavelet_loss(self):
         wavelet_loss = 0.
         for index, _ in enumerate(self.num_blocks):
-            for block in getattr(self, f'd{index+1}'):
-                wavelet_loss += block.get_wavelet_loss()
+            if _ is not None:
+                for block in getattr(self, f'd{index+1}'):
+                    wavelet_loss += block.get_wavelet_loss()
         return wavelet_loss
 
 class Deblur_head(nn.Module):
@@ -439,16 +440,16 @@ class Decoder(nn.Module):
     def forward(self, x4, x3, x3_b, x2, x2_b, x1):
         # x = x4.contiguous()
         x = self.d4(x4)
-        x4 = self.head4(x) if self.training else None
+        x4 = self.head4(x)  # if self.training else None
 
         x = self.up43(x) + x3
         x = self.d3(x)
-        x3 = self.head3(x) if self.training else None
+        x3 = self.head3(x)  # if self.training else None
 
         x2_n = x2.contiguous()
         x = self.up32(x) + x2
         x = self.d2(x)
-        x2 = self.head2(x) if self.training else None
+        x2 = self.head2(x)  # if self.training else None
 
         x = self.up21(x + x2_n * self.alpha) + x1
         x = self.d1(x)

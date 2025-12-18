@@ -100,6 +100,10 @@ class RealBlurDataset(Dataset):
                 # (path, (h_idx, w_idx), image_idx, n_patches)
                 self.blur_image_list.append((blur_image_path, [0, 0], idx, 1))
                 self.gt_image_list.append((gt_image_path, [0, 0], idx, 1))
+            elif self.rand_crop:
+                # (path, (h_idx, w_idx), image_idx, n_patches)
+                self.blur_image_list.append((blur_image_path, [0, 0], idx, 1))
+                self.gt_image_list.append((gt_image_path, [0, 0], idx, 1))
             else:
                 # Split patch indexes
                 h_step, w_step = self.step_size
@@ -154,21 +158,19 @@ class RealBlurDataset(Dataset):
         img_idx   = self.blur_image_list[index][2]
         n_patches = self.blur_image_list[index][3]
 
+        h, w = blur_img.shape[0], blur_img.shape[1]
         if self.orig_size:
             # Use original image size
             h_idx, w_idx = 0, 0
+        elif self.rand_crop:
+            # Random crop
+            h_idx = np.random.randint(0, h - self.img_size[0] + 1)
+            w_idx = np.random.randint(0, w - self.img_size[1] + 1)
+            blur_img = blur_img[h_idx:h_idx+self.img_size[0], w_idx:w_idx+self.img_size[1], :]
+            gt_img   = gt_img[h_idx:h_idx+self.img_size[0], w_idx:w_idx+self.img_size[1], :]
         else:
-            h, w = blur_img.shape[0], blur_img.shape[1]
-
             # Crop image patch
             h_idx, w_idx = self.blur_image_list[index][1]
-            if self.rand_crop:
-                h_bias = np.random.randint(-self.step_size[0] // 2, self.step_size[0] // 2 + 1)
-                w_bias = np.random.randint(-self.step_size[1] // 2, self.step_size[1] // 2 + 1)
-                h_idx += h_bias
-                w_idx += w_bias
-                h_idx = np.clip(h_idx, 0, h - self.img_size[0])
-                w_idx = np.clip(w_idx, 0, w - self.img_size[1])
             blur_img = blur_img[h_idx:h_idx+self.img_size[0], w_idx:w_idx+self.img_size[1], :]
             gt_img   = gt_img[h_idx:h_idx+self.img_size[0], w_idx:w_idx+self.img_size[1], :]
 

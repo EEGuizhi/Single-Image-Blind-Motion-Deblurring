@@ -225,7 +225,8 @@ def _compute_ssim_torch(
 def realblur_psnr_ssim_torch(
     pred: torch.Tensor,
     gt: torch.Tensor,
-    data_range: float = 1.0
+    data_range: float = 1.0,
+    ecc_iters: int = 100
 ) -> tuple[float, float]:
     """
     RealBlur / MLWNet style PSNR & SSIM with ECC alignment and mask,
@@ -237,6 +238,9 @@ def realblur_psnr_ssim_torch(
         gt : torch.Tensor
             [B, 3, H, W], float, range [0, 1], ground truth
         data_range : float
+            data range for PSNR/SSIM computation
+        ecc_iters : int
+            number of iterations for ECC image alignment
 
     Returns:
         avg_psnr : float
@@ -259,7 +263,7 @@ def realblur_psnr_ssim_torch(
         tar_np = gt[b].detach().cpu().permute(1, 2, 0).numpy().astype(np.float32)
 
         # start_time = time.time()
-        aligned_prd, aligned_tar, mask, _ = _image_align_np(prd_np, tar_np, n_iterations=50)
+        aligned_prd, aligned_tar, mask, _ = _image_align_np(prd_np, tar_np, n_iterations=ecc_iters)
         # end_time = time.time()
         # print(f"Image alignment took {end_time - start_time:.4f} seconds")
 

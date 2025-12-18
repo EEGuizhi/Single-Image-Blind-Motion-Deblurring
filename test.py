@@ -33,13 +33,16 @@ def test(
     test_loader: DataLoader,
     img_size: tuple[int, int],
     device: torch.device,
-    show_images: list[int]=None
+    ecc_iters: int = 100,
+    show_images: list[int] = None
     ) -> tuple[float, float]:
     """Testing loop for evaluating the model on the test dataset.
     Args:
         model (torch.nn.Module): The trained model to be evaluated.
         test_loader (DataLoader): DataLoader for the test dataset.
+        img_size (tuple[int, int]): Size of the input image patches (height, width).
         device (torch.device): Device to run the evaluation on (CPU or GPU).
+        ecc_iters (int, optional): Number of ECC iterations for image alignment. Default is 100.
         show_images (list[int], optional): List of image indices to save outputs for visualization.
     Returns:
         tuple[float, float]: Average PSNR and SSIM over the test dataset.
@@ -100,7 +103,7 @@ def test(
 
                 # Compute metrics
                 psnr, ssim = realblur_psnr_ssim_torch(
-                    combined_output.unsqueeze(0), combined_target.unsqueeze(0)
+                    combined_output.unsqueeze(0), combined_target.unsqueeze(0), ecc_iters=ecc_iters
                 )
 
                 total_psnr += psnr
@@ -124,6 +127,7 @@ if __name__ == "__main__":
     BATCH_SIZE  = TEST_CONFIG["batch_size"]
     IMG_SIZE    = TEST_CONFIG["patch_size"]
     OVERLAP     = TEST_CONFIG["overlap"]
+    ECC_ITERS   = TEST_CONFIG["ecc_iters"]
     SHOW_IMAGES = TEST_CONFIG["show_image_indices"]
     NUM_WORKERS = TEST_CONFIG["num_workers"]
 
@@ -167,7 +171,7 @@ if __name__ == "__main__":
     model = model.to(DEVICE)
 
     # Run testing
-    avg_psnr, avg_ssim = test(model, test_loader, IMG_SIZE, DEVICE, SHOW_IMAGES)
+    avg_psnr, avg_ssim = test(model, test_loader, IMG_SIZE, DEVICE, ECC_ITERS, SHOW_IMAGES)
     log.print_log(f"Average PSNR: {avg_psnr:.5f} dB")
     log.print_log(f"Average SSIM: {avg_ssim:.5f}")
 

@@ -3,3 +3,4 @@ Change:
     - 保留水平與垂直翻轉，並將 45 degree 隨機旋轉改為 90 degree 隨機旋轉。
 
 Result:
+    結果有變好一點但不多。

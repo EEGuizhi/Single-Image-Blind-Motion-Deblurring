@@ -12,11 +12,11 @@ Description:
 import torch
 import torch.nn as nn
 
-from .MLWNet import MLWNet_Local
+from .MLWNet import MLWNet_Local, MLWNet
 from .network import Network
 
 
-__all__ = ['MLWNet_Local', 'Network']
+__all__ = ['MLWNet_Local', 'MLWNet', 'Network']
 
 
 def load_model(model_name: str, **kwargs) -> nn.Module:
@@ -30,6 +30,9 @@ def load_model(model_name: str, **kwargs) -> nn.Module:
     if model_name == 'MLWNet_Local':
         dim = kwargs.get('model_dim', 32)
         return MLWNet_Local(dim=dim)
+    elif model_name == 'MLWNet':
+        dim = kwargs.get('model_dim', 32)
+        return MLWNet(dim=dim)
     elif model_name == 'Network':
         dim = kwargs.get('model_dim', 32)
         expand_dim = kwargs.get('expand_dim', 2)

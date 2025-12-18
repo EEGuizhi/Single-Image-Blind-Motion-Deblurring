@@ -205,7 +205,7 @@ class DecoderBlock(nn.Module):
         self,
         in_channels: int,
         out_channels: int = None,
-        kernel_size: int = 5,
+        kernel_size: int = 3,
         stride: int = 1,
         dilations: list[int] = [1],
         expand_conv: float = 2.0,

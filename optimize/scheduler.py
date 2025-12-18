@@ -39,8 +39,8 @@ class Scheduler:
                 patience=patience, min_lr=min_lr
             )
         elif scheduler_name == 'CosineAnnealingLR':
-            T_max = kwargs.get('T_max', 50)
-            eta_min = kwargs.get('eta_min', 0)
+            T_max = kwargs.get('T_max', 600000)
+            eta_min = kwargs.get('eta_min', 1e-7)
             return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
         else:
             raise ValueError(f"Unsupported scheduler: {scheduler_name}")
