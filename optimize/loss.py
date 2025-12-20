@@ -15,6 +15,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from optimize.loss_util import weighted_loss
+
+
+@weighted_loss
+def l1_loss(pred, target):
+    return F.l1_loss(pred, target, reduction='none')
+
 
 class L1Loss(nn.Module):
     """L1 (Mean Absolute Error, MAE) Loss Function"""
@@ -87,3 +94,57 @@ class SIMOLoss(nn.Module):
         ).mean()
 
         return loss
+
+
+class CharbonnierLoss(nn.Module):
+    def __init__(self, eps: float=1e-3, reduction: str="mean"):
+        super().__init__()
+        if reduction != "mean" and reduction != "sum" and reduction != "None":
+            raise ValueError("Reduction type not supported")
+        else:
+            self.reduction = reduction
+        self.eps = eps
+
+    def forward(self, output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        diff = output - target
+
+        out = torch.sqrt((diff * diff) + (self.eps * self.eps))
+        if self.reduction == "mean":
+            out = torch.mean(out)
+        elif self.reduction == "sum":
+            out = torch.sum(out)
+
+        return out
+
+
+class EdgeLoss(nn.Module):
+    def __init__(self, weight: float=0.05):
+        """
+        Taken from:
+        https://github.com/swz30/MPRNet/blob/main/Deblurring/losses.py
+        """
+        super(EdgeLoss, self).__init__()
+        self.weight = weight
+        k = torch.Tensor([[.05, .25, .4, .25, .05]])
+        self.kernel = torch.matmul(k.t(), k).unsqueeze(0).repeat(3, 1, 1, 1)
+        if torch.cuda.is_available():
+            self.kernel = self.kernel.cuda()
+        self.loss = CharbonnierLoss()
+
+    def conv_gauss(self, img: torch.Tensor) -> torch.Tensor:
+        n_channels, _, kw, kh = self.kernel.shape
+        img = F.pad(img, (kw//2, kh//2, kw//2, kh//2), mode='replicate')
+        return F.conv2d(img, self.kernel, groups=n_channels)
+
+    def laplacian_kernel(self, current: torch.Tensor) -> torch.Tensor:
+        filtered = self.conv_gauss(current)  # filter
+        down = filtered[:, :, ::2, ::2]  # downsample
+        new_filter = torch.zeros_like(filtered)
+        new_filter[:, :, ::2, ::2] = down*4  # upsample
+        filtered = self.conv_gauss(new_filter)  # filter
+        diff = current - filtered
+        return diff
+
+    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        loss = self.loss(self.laplacian_kernel(x), self.laplacian_kernel(y))
+        return self.weight * loss

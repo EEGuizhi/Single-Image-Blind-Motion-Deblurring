@@ -37,10 +37,13 @@ def load_checkpoint(
     model: nn.Module,
     optimizer: torch.optim.Optimizer,
     scheduler: torch.optim.lr_scheduler._LRScheduler,
-    device: torch.device
+    device: torch.device,
+    weight_only: bool = False
 ) -> tuple[int, float]:
     checkpoint = torch.load(path, map_location=device)
     model.load_state_dict(checkpoint['params'])
+    if weight_only:
+        return 0, float('-inf')
     optimizer.load_state_dict(checkpoint['optimizer'])
     scheduler.load_state_dict(checkpoint['scheduler'])
     return checkpoint['epoch'], checkpoint.get('best_eval', float('-inf'))

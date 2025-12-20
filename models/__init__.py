@@ -28,13 +28,13 @@ def load_model(model_name: str, **kwargs) -> nn.Module:
         nn.Module: Instantiated model.
     """
     if model_name == 'MLWNet_Local':
-        dim = kwargs.get('model_dim', 32)
+        dim = kwargs.get('dim', 32)
         return MLWNet_Local(dim=dim)
     elif model_name == 'MLWNet':
-        dim = kwargs.get('model_dim', 32)
+        dim = kwargs.get('dim', 32)
         return MLWNet(dim=dim)
     elif model_name == 'Network':
-        dim = kwargs.get('model_dim', 32)
+        dim = kwargs.get('dim', 32)
         expand_dim = kwargs.get('expand_dim', 2)
         aux_heads = kwargs.get('aux_heads', True)
         return Network(dim=dim, expand_dim=expand_dim, aux_heads=aux_heads)

@@ -1,6 +1,7 @@
 Change:
     - 改寫 dataset.py，每個 Epoch 每張圖片只會取一個 Patch。
     - 使用 MLWNet (dim = 32) 進行訓練。
+    - 此為仿照原版 MLWNet 模型與訓練方式。
 
 Result:
-    
+    - PSNR 約 32dB

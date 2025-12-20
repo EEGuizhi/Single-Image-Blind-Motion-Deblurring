@@ -34,37 +34,41 @@ CACHE_SIZE = 1000
 
 
 # ------------------------------- Training Configurations ------------------------------- #
-EXPERIMENT_DIR = f"{OUTPUT_DIR}/experiments/realblur_exp_06"
+EXPERIMENT_DIR = f"{OUTPUT_DIR}/experiments/realblur_exp_08"
 TRAIN_CONFIG = {
-    'model_name': 'MLWNet',   # Options: 'MLWNet_Local', 'MLWNet', 'Network'
+    'model_name': 'Network',   # Options: 'MLWNet_Local', 'MLWNet', 'Network'
     'model_dim': 32,           # Options: 32, 64
-    'patch_size': (256, 256),  # (H, W)
+    'patch_size': (512, 512),  # (H, W)
     'overlap': (64, 64),       # (H_overlap, W_overlap)
 
     'augmentation': True,
     'rand_crop': True,
-    'num_epochs': 1300,
-    'batch_size': 8,
-    'learning_rate': 1e-3,
+    'num_epochs': 600,
+    'batch_size': 4,
+    'learning_rate': 1e-4,
+
+    'simo_loss': True,
+    'edge_loss': True,
 
     'optimizer': 'AdamW',
     'scheduler': 'CosineAnnealingLR',  # Options: 'StepLR', 'CosineAnnealingLR', 'ReduceLROnPlateau'
-    'metric': 'SSIM',                  # Options: 'PSNR', 'SSIM', 'CW-SSIM'
+    'metric': 'SSIM',                  # Options: 'PSNR', 'SSIM'
 
-    'checkpoint': f"{EXPERIMENT_DIR}/MLWNet_d32.pth",
+    'checkpoint': f"{EXPERIMENT_DIR}/Network_d32.pth",
+    'weight_only': True,
     'num_workers': 8,
 }
 
 
 # ------------------------------- Testing Configurations ------------------------------- #
 TEST_CONFIG = {
-    'model_name': 'MLWNet',       # Options: 'MLWNet_Local', 'MLWNet', 'Network'
+    'model_name': 'Network',       # Options: 'MLWNet_Local', 'MLWNet', 'Network'
     'model_dim': 32,               # Options: 32, 64
     # 'weights_path': f"{ROOT_DIR}/pretrain_weights/realblur_j-width32.pth",
-    'weights_path': f"{ROOT_DIR}/pretrain_weights/MLWNet_d32.pth",
+    'weights_path': f"{ROOT_DIR}/pretrain_weights/Network_d32.pth",
 
     'batch_size': 1,
-    'patch_size': (512, 512),  # (H, W)
+    'patch_size': (256, 256),  # (H, W)
     'overlap': (128, 128),     # (H_overlap, W_overlap)
 
     'ecc_iters': 50,
@@ -76,6 +80,6 @@ TEST_CONFIG = {
 # --------------------------------- Summary Configuration --------------------------------- #
 SUMMARY_CONFIG = {
     'model_name': 'Network',   # Options: 'MLWNet_Local', 'Network'
-    'model_dim': 64,           # Options: 32, 64
+    'model_dim': 32,           # Options: 32, 64
     'patch_size': (256, 256),  # (H, W)
 }

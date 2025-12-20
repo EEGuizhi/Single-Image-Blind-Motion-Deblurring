@@ -67,8 +67,10 @@ def train_epoch(
 
             # Compute loss
             loss = criterion(outputs, targets)
-            if MODEL_NAME == 'MLWNet':
+            if hasattr(model, 'get_wavelet_loss'):
                 loss += model.get_wavelet_loss()
+            if EDGE_LOSS:
+                loss += EdgeLoss()(outputs[0], targets)
             pbar.set_postfix({"loss": loss.item()})
 
             # Backward pass and optimize
@@ -190,10 +192,13 @@ if __name__ == "__main__":
     NUM_EPOCHS  = TRAIN_CONFIG["num_epochs"]
     BATCH_SIZE  = TRAIN_CONFIG["batch_size"]
     LR          = TRAIN_CONFIG["learning_rate"]
+    SIMO_LOSS   = TRAIN_CONFIG["simo_loss"]
+    EDGE_LOSS   = TRAIN_CONFIG["edge_loss"]
     OPTIMIZER   = TRAIN_CONFIG["optimizer"]
     SCHEDULER   = TRAIN_CONFIG["scheduler"]
     METRIC      = TRAIN_CONFIG["metric"]
     CHECKPOINT  = TRAIN_CONFIG["checkpoint"]
+    WGT_ONLY    = TRAIN_CONFIG["weight_only"]
     NUM_WORKERS = TRAIN_CONFIG["num_workers"]
 
     # Directory setup
@@ -258,7 +263,7 @@ if __name__ == "__main__":
     # Load checkpoint if provided
     if continue_training:
         start_epoch, best_eval = load_checkpoint(
-            CHECKPOINT, model, optimizer, scheduler, DEVICE
+            CHECKPOINT, model, optimizer, scheduler, DEVICE, weight_only=WGT_ONLY
         )
         log.print_log(f"Resumed training from checkpoint at epoch {start_epoch}\n")
         start_epoch += 1  # Start from the next epoch

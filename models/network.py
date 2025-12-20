@@ -7,16 +7,18 @@ Author: BSChen
 Description:
     NYCU IEE Deep Learning Final Project - Single Image Blind Motion Deblurring
     Group 25: 313510156, 313510217
+    
+    This code is based on:
+    https://github.com/thqiu0419/MLWNet/blob/master/basicsr/models/archs/MLWNet_arch.py
 """
 
-import math
 import numpy as np
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from models.basic_modules import *
+from models.wavelet_block import LWN
 
 
 # ---------------------------------------------------------------------------------------------- #
@@ -24,236 +26,109 @@ from models.basic_modules import *
 # ---------------------------------------------------------------------------------------------- #
 
 
-class EncoderBlock(nn.Module):
-    """Basic Encoder Block, modified from NAFBlock"""
-    def __init__(
-        self,
-        in_channels: int,
-        out_channels: int = None,
-        kernel_size: int = 3,
-        stride: int = 1,
-        dilations: list[int] = [1],
-        expand_conv: float = 2.0,
-        expand_ffn: float = 2.0
-    ) -> None:
-        # Initialization
-        super(EncoderBlock, self).__init__()
-        out_channels = in_channels if out_channels is None else out_channels
-        dw_channels  = round(in_channels * expand_conv)
-        ffn_channels = round(in_channels * expand_ffn)
-        mid_channels = [dw_channels // 2, ffn_channels // 2]
-
-        # Convolutional Layers
-        self.conv1_pw = nn.Conv2d(in_channels, dw_channels, kernel_size=1, stride=1, padding=0)
-        # self.conv2_dw = nn.Conv2d(
-        #     dw_channels, dw_channels, kernel_size=kernel_size,
-        #     stride=stride, padding=padding, dilation=dilation, groups=dw_channels
-        # )
-        self.conv2_dw = self._make_dwconv_layers(
-            channels=dw_channels,
-            kernel_size=kernel_size,
-            stride=stride,
-            dilations=dilations
-        )
-        self.conv3_pw = nn.Conv2d(mid_channels[0], in_channels, kernel_size=1, stride=1, padding=0)
-        self.conv4_pw = nn.Conv2d(in_channels, ffn_channels, kernel_size=1, stride=1, padding=0)
-        self.conv5_pw = nn.Conv2d(mid_channels[1], out_channels, kernel_size=1, stride=1, padding=0)
-
-        # Simplified Channel Attention
-        self.sca = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(
-                in_channels=mid_channels[0], out_channels=mid_channels[0],
-                kernel_size=1, stride=1, padding=0
-            )
-        )
-
-        # Shortcut Layers
-        self.shortcut1 = (
-            nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=stride, bias=False)
-            if stride != 1 else nn.Identity()
-        )
-        self.shortcut2 = (
-            nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False)
-            if in_channels != out_channels else nn.Identity()
-        )
-
-        # Activation (Simple Gate) and Normalization
-        self.gate1 = GroupSimpleGate(group=len(dilations))
-        self.gate2 = GroupSimpleGate()
-        self.norm1 = LayerNorm2d(in_channels)
-        self.norm2 = LayerNorm2d(in_channels)
-
-    def _make_dwconv_layers(
-        self,
-        channels: int,
-        kernel_size: int,
-        stride: int,
-        dilations: list[int]
-    ) -> nn.ModuleList:
-        assert channels % len(dilations) == 0, "Channels must be divisible by the number of dilations."
-        sub_ch = channels // len(dilations)
-        dwconv_layers = nn.ModuleList()
-        for d in dilations:
-            p = ((kernel_size - 1) * d) // 2
-            dwconv_layers.append(
-                nn.Conv2d(
-                    sub_ch, sub_ch, kernel_size=kernel_size,
-                    stride=stride, padding=p, dilation=d, groups=sub_ch
-                )
-            )
-        return dwconv_layers
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # ----------------- Part I ----------------- #
-        residual = self.shortcut1(x)
-        x = self.norm1(x)
-        x = self.conv1_pw(x)
-
-        # Split channels for different dilated convolutions
-        x_splits = torch.chunk(x, len(self.conv2_dw), dim=1)
-        x_dwconv = [conv(x_split) for conv, x_split in zip(self.conv2_dw, x_splits)]
-        x = torch.cat(x_dwconv, dim=1)
-
-        x = self.gate1(x)
-        x = self.sca(x) * x
-        x = self.conv3_pw(x)
-        x += residual
-
-        # ----------------- Part II ----------------- #
-        residual = self.shortcut2(x)
-        x = self.norm2(x)
-        x = self.conv4_pw(x)
-        x = self.gate2(x)
-        x = self.conv5_pw(x)
-        x += residual
-
-        return x
-
-
-class DFFN(nn.Module):
-    """Discriminative frequency domain-based FFN Module, modified from FFTFormer"""
+class WaveletBlock(nn.Module):
     def __init__(
         self,
         dim: int,
+        expand_conv: float = 2.0,
         expand_ffn: float = 2.0,
-        patch_size: int = 8,
-        bias: bool = True
+        drop_out_rate: float = 0.0
     ) -> None:
         # Initialization
-        super(DFFN, self).__init__()
-        dw_channels = int(dim * expand_ffn)
-        self.dim = dim
-        self.patch_size = patch_size
+        super().__init__()
+        dw_channels  = round(dim * expand_conv)
+        ffn_channels = round(dim * expand_ffn)
+        mid_channels = [dw_channels // 2, ffn_channels // 2]
 
-        self.project_in = nn.Conv2d(dim, dw_channels * 2, kernel_size=1, bias=bias)
-        self.dwconv = nn.Conv2d(
-            dw_channels * 2, dw_channels * 2, kernel_size=3,
-            stride=1, padding=1, groups=dw_channels * 2, bias=bias
+        # Layers
+        self.wavelet_block1 = LWN(dim, wavelet='haar', initialize=True, kernel_size=[5, 3])
+        self.conv3 = nn.Conv2d(mid_channels[0], dim, 1, padding=0, stride=1, bias=True)
+        self.sca = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Conv2d(mid_channels[0], mid_channels[0], 1, padding=0, stride=1, bias=True)
         )
-        self.fft = nn.Parameter(
-            torch.ones((dw_channels * 2, 1, 1, self.patch_size, self.patch_size // 2 + 1))
-        )
-        self.project_out = nn.Conv2d(dw_channels, dim, kernel_size=1, bias=bias)
+        self.conv4 = nn.Conv2d(dim, ffn_channels, 1, padding=0, stride=1, bias=True)
+        self.conv5 = nn.Conv2d(mid_channels[1], dim, 1, padding=0, stride=1, bias=True)
+        self.norm1 = LayerNorm2d(dim)
+        self.norm2 = LayerNorm2d(dim)
+        self.gate1 = SimpleGate()
+        self.dropout1 = nn.Dropout(drop_out_rate) if drop_out_rate > 0. else nn.Identity()
+        self.dropout2 = nn.Dropout(drop_out_rate) if drop_out_rate > 0. else nn.Identity()
+        self.beta = nn.Parameter(torch.zeros((1, dim, 1, 1)), requires_grad=True)
+        self.gamma = nn.Parameter(torch.zeros((1, dim, 1, 1)), requires_grad=True)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.project_in(x)
+    def forward(self, x_in: torch.Tensor) -> torch.Tensor:
+        x = x_in
+        x = self.norm1(x)
+        x = self.wavelet_block1(x)
 
-        b, c, h, w = x.shape
-        assert h % self.patch_size == 0 and w % self.patch_size == 0, \
-            "Height and Width must be divisible by patch_size"
+        x = x * self.sca(x)
+        x = self.conv3(x)
+        x = self.dropout1(x)
 
-        # # Original patch unfolding implementation
-        # x_patch = rearrange(
-        #     x, 'b c (h patch1) (w patch2) -> b c h w patch1 patch2',
-        #     patch1=self.patch_size, patch2=self.patch_size
-        # )
+        y = x_in + x * self.beta
+        x = self.norm2(y)
+        x = self.conv4(x)
 
-        # Non-overlapping patching
-        x_patch = x.view(b, c,                        # (B, C, h, ps, w, ps)
-            h // self.patch_size, self.patch_size,
-            w // self.patch_size, self.patch_size
-        )
-        x_patch = x_patch.permute(0, 1, 2, 4, 3, 5)   # (B, C, h, w, ps, ps)
-        x_patch = x_patch.contiguous()
+        x = self.gate1(x)
+        x = self.conv5(x)
+        x = self.dropout2(x)
+        return y + x * self.gamma
 
-        # Frequency domain weighting
-        x_patch_fft = torch.fft.rfft2(x_patch.float())
-        x_patch_fft = x_patch_fft * self.fft
-        x_patch = torch.fft.irfft2(x_patch_fft, s=(self.patch_size, self.patch_size))
-
-        # # Original patch folding implementation
-        # x = rearrange(
-        #     x_patch,
-        #     'b c h w patch1 patch2 -> b c (h patch1) (w patch2)',
-        #     patch1=self.patch_size, patch2=self.patch_size
-        # )
-
-        # Non-overlapping unpatching
-        x = x_patch.permute(0, 1, 2, 4, 3, 5).contiguous()   # (B, C, h, ps, w, ps)
-        x = x.view(b, c, h, w)                               # (B, C, H, W)
-
-        x1, x2 = self.dwconv(x).chunk(2, dim=1)
-        x = F.gelu(x1) * x2
-        x = self.project_out(x)
-        return x
+    def get_wavelet_loss(self):
+        return self.wavelet_block1.get_wavelet_loss()
 
 
-class DecoderBlock(nn.Module):
-    """Basic Decoder Block"""
+class NAFBlock(nn.Module):
+    """Simple Embedding Block (NAFNet-like)"""
     def __init__(
         self,
         in_channels: int,
-        out_channels: int = None,
-        kernel_size: int = 5,
-        stride: int = 1,
+        kernel_size: int = 3,
         dilations: list[int] = [1],
         expand_conv: float = 2.0,
-        expand_ffn: float = 2.0
+        expand_ffn: float = 2.0,
+        drop_out_rate: float = 0.0
     ) -> None:
         # Initialization
-        super(DecoderBlock, self).__init__()
-        out_channels = in_channels if out_channels is None else out_channels
+        super().__init__()
         dw_channels  = round(in_channels * expand_conv)
         ffn_channels = round(in_channels * expand_ffn)
         mid_channels = [dw_channels // 2, ffn_channels // 2]
 
         # Convolutional Layers
-        self.conv1_pw = nn.Conv2d(in_channels, dw_channels, kernel_size=1, stride=1, padding=0)
-        self.conv2_dw = self._make_dwconv_layers(
-            channels=dw_channels,
-            kernel_size=kernel_size,
-            stride=stride,
-            dilations=dilations
+        self.conv1 = nn.Conv2d(in_channels, dw_channels, 1, padding=0, stride=1, bias=True)
+        # self.conv2 = nn.Conv2d(
+        #     in_channels=dw_channels, out_channels=dw_channels, kernel_size=3,
+        #     padding=1, stride=1, groups=dw_channels, bias=True
+        # )
+        self.conv2 = self._make_dwconv_layers(
+            channels=dw_channels, kernel_size=kernel_size, stride=1, dilations=dilations
         )
-        self.conv3_pw = nn.Conv2d(mid_channels[0], in_channels, kernel_size=1, stride=1, padding=0)
-
-        # Feed-forward Network
-        self.ffn = DFFN(in_channels, expand_ffn=expand_ffn)
+        self.conv3 = nn.Conv2d(mid_channels[0], in_channels, 1, stride=1, padding=0, bias=True)
+        self.conv4 = nn.Conv2d(in_channels, ffn_channels, 1, padding=0, stride=1, bias=True)
+        self.conv5 = nn.Conv2d(mid_channels[1], in_channels, 1, padding=0, stride=1, bias=True)
 
         # Simplified Channel Attention
         self.sca = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(
-                in_channels=mid_channels[0], out_channels=mid_channels[0],
-                kernel_size=1, stride=1, padding=0
-            )
+            nn.Conv2d(mid_channels[0], mid_channels[0], 1, padding=0, stride=1, bias=True)
         )
 
-        # Shortcut Layers
-        self.shortcut1 = (
-            nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=stride, bias=False)
-            if stride != 1 else nn.Identity()
-        )
-        self.shortcut2 = (
-            nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False)
-            if in_channels != out_channels else nn.Identity()
-        )
-
-        # Activation (Simple Gate) and Normalization
+        # Activations
         self.gate1 = GroupSimpleGate(group=len(dilations))
+        self.gate2 = GroupSimpleGate()
+
+        # Normalizations
         self.norm1 = LayerNorm2d(in_channels)
         self.norm2 = LayerNorm2d(in_channels)
+
+        # Dropouts
+        self.dropout1 = nn.Dropout(drop_out_rate) if drop_out_rate > 0. else nn.Identity()
+        self.dropout2 = nn.Dropout(drop_out_rate) if drop_out_rate > 0. else nn.Identity()
+
+        self.beta = nn.Parameter(torch.zeros((1, in_channels, 1, 1)), requires_grad=True)
+        self.gamma = nn.Parameter(torch.zeros((1, in_channels, 1, 1)), requires_grad=True)
 
     def _make_dwconv_layers(
         self,
@@ -275,29 +150,35 @@ class DecoderBlock(nn.Module):
             )
         return dwconv_layers
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x_in: torch.Tensor) -> torch.Tensor:
         # ----------------- Part I ----------------- #
-        residual = self.shortcut1(x)
+        x = x_in
         x = self.norm1(x)
-        x = self.conv1_pw(x)
+        x = self.conv1(x)
 
         # Split channels for different dilated convolutions
-        x_splits = torch.chunk(x, len(self.conv2_dw), dim=1)
-        x_dwconv = [conv(x_split) for conv, x_split in zip(self.conv2_dw, x_splits)]
+        x_splits = torch.chunk(x, len(self.conv2), dim=1)
+        x_dwconv = [conv(x_split) for conv, x_split in zip(self.conv2, x_splits)]
         x = torch.cat(x_dwconv, dim=1)
 
         x = self.gate1(x)
         x = self.sca(x) * x
-        x = self.conv3_pw(x)
-        x += residual
+        x = self.conv3(x)
+
+        x = self.dropout1(x)
+        y = x_in + self.beta * x
 
         # ----------------- Part II ----------------- #
-        residual = self.shortcut2(x)
-        x = self.norm2(x)
-        x = self.ffn(x)
-        x += residual
+        x = self.norm2(y)
+        x = self.conv4(x)
+        x = self.gate2(x)
+        x = self.conv5(x)
 
-        return x
+        x = self.dropout2(x)
+        return y + x * self.gamma
+
+    def get_wavelet_loss(self):
+        return 0.0
 
 
 # ---------------------------------------------------------------------------------------------- #
@@ -305,134 +186,83 @@ class DecoderBlock(nn.Module):
 # ---------------------------------------------------------------------------------------------- #
 
 
-class FeatureEmbedding(nn.Module):
-    """Feature Embedding Part"""
-    def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        kernel_size: int = 3,
-        stride: int = 1,
-        padding: int = 1,
-    ) -> None:
-        # Initialization
-        super(FeatureEmbedding, self).__init__()
-
-        # Convolutional Layer
-        self.conv = nn.Conv2d(
-            in_channels, out_channels,
-            kernel_size=kernel_size, stride=stride, padding=padding
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.conv(x)
-        return x
-
-
 class Encoder(nn.Module):
-    """Encoder Part"""
     def __init__(
         self,
+        in_channels: int = 3,
         dim: int = 32,
         expand_dim: float = 2.0,
-        num_blocks: list = [2, 4, 4, 6],
+        num_blocks: list[int] = [2, 4, 4, 6],
     ) -> None:
         # Initialization
         super(Encoder, self).__init__()
         dims = [round(dim * (expand_dim ** i)) for i in range(len(num_blocks))]
+        self.num_blocks = num_blocks
+
+        # Embedding Layer
+        self.feature_embed = nn.Conv2d(in_channels, dim, 3, padding=1, stride=1, bias=True)
 
         # Stage 1
-        self.fuse1 = nn.Sequential(*[
-            EncoderBlock(dims[0], dims[0], dilations=[1, 2], expand_conv=2, expand_ffn=2)
-            for _ in range(num_blocks[0])
-        ])
-        self.down1 = nn.Conv2d(dims[0], dims[1], kernel_size=2, stride=2)
+        self.b1 = nn.Sequential(*[NAFBlock(dims[0], 3, dilations=[1, 2]) for _ in range(num_blocks[0])])
+        self.down1 = nn.Conv2d(dims[0], dims[1], 2, 2)
 
         # Stage 2
-        self.fuse2 = nn.Sequential(*[
-            EncoderBlock(dims[1], dims[1], dilations=[1, 2], expand_conv=2, expand_ffn=2)
-            for _ in range(num_blocks[1])
-        ])
-        self.down2 = nn.Conv2d(dims[1], dims[2], kernel_size=2, stride=2)
+        self.b2 = nn.Sequential(*[NAFBlock(dims[1], 3, dilations=[1, 2]) for _ in range(num_blocks[1])])
+        self.down2 = nn.Conv2d(dims[1], dims[2], 2, 2)
 
         # Stage 3
-        self.fuse3 = nn.Sequential(*[
-            EncoderBlock(dims[2], dims[2], dilations=[1, 2], expand_conv=2, expand_ffn=2)
-            for _ in range(num_blocks[2])
-        ])
-        self.down3 = nn.Conv2d(dims[2], dims[3], kernel_size=2, stride=2)
+        self.b3 = nn.Sequential(*[NAFBlock(dims[2], 3, dilations=[1, 2]) for _ in range(num_blocks[2])])
+        self.down3 = nn.Conv2d(dims[2], dims[3], 2, 2)
 
         # Stage 4
-        self.fuse4 = nn.Sequential(*[
-            EncoderBlock(dims[3], dims[3], dilations=[1, 2], expand_conv=2, expand_ffn=2)
-            for _ in range(num_blocks[3])
-        ])
+        self.b4 = nn.Sequential(*[NAFBlock(dims[3], 3, dilations=[1, 2]) for _ in range(num_blocks[3])])
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x1 = self.fuse1(x)
+    def forward(
+        self, x: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        x = self.feature_embed(x)
+        x1 = self.b1(x)
+
         x = self.down1(x1)
+        x2 = self.b2(x)
 
-        x2 = self.fuse2(x)
         x = self.down2(x2)
+        x3 = self.b3(x)
 
-        x3 = self.fuse3(x)
         x = self.down3(x3)
-
-        x4 = self.fuse4(x)
+        x4 = self.b4(x)
         return x1, x2, x3, x4
 
 
-class Bridge(nn.Module):
-    """Bridge Part (not used yet)"""
+class Fusion(nn.Module):
     def __init__(
         self,
-        dim: int,
+        dim: int = 32,
         expand_dim: float = 2.0,
-        num_blocks: list = [0, 2, 2, 0],
+        num_blocks: list[int] = [2, 4, 4, 6],
     ) -> None:
         # Initialization
-        super(Bridge, self).__init__()
-        assert len(num_blocks) == 4, "num_blocks must have four elements."
-        assert num_blocks[-1] == 0, "The last element of num_blocks must be zero."
+        super(Fusion, self).__init__()
         dims = [round(dim * (expand_dim ** i)) for i in range(len(num_blocks))]
+        self.num_blocks = num_blocks
 
         # Stage 4
-        self.up4 = nn.Sequential(
-            nn.Conv2d(dims[3], dims[3], kernel_size=3, padding=1, groups=dims[3]),
-            nn.Conv2d(dims[3], dims[2] * 4, kernel_size=1),
+        self.up43 = nn.Sequential(
+            nn.Conv2d(dims[3], dims[2] * 4, 1, bias=False),
             nn.PixelShuffle(2)
         )
 
         # Stage 3
-        self.ch_reduce3 = nn.Conv2d(dims[2] * 2, dims[2], kernel_size=1)
-        self.fuse3 = nn.Sequential(*[
-            DecoderBlock(dims[2], dims[2], dilations=[1, 2], expand_conv=2, expand_ffn=2)
-            for _ in range(num_blocks[2])
-        ])
-        self.up3 = nn.Sequential(
-            nn.Conv2d(dims[2], dims[2], kernel_size=3, padding=1, groups=dims[2]),
-            nn.Conv2d(dims[2], dims[1] * 4, kernel_size=1),
+        self.ch_reduce3 = nn.Conv2d(dims[2] * 2, dims[2], 1, bias=False)
+        self.d3 = nn.Sequential(*[WaveletBlock(dims[2]) for _ in range(num_blocks[2])])
+        self.up32 = nn.Sequential(
+            nn.Conv2d(dims[2], dims[1] * 4, 1, bias=False),
             nn.PixelShuffle(2)
         )
 
         # Stage 2
-        self.ch_reduce2 = nn.Conv2d(dims[1] * 2, dims[1], kernel_size=1)
-        self.fuse2 = nn.Sequential(*[
-            DecoderBlock(dims[1], dims[1], dilations=[1, 2], expand_conv=2, expand_ffn=2)
-            for _ in range(num_blocks[1])
-        ])
-        self.up2 = nn.Sequential(
-            nn.Conv2d(dims[1], dims[1], kernel_size=3, padding=1, groups=dims[1]),
-            nn.Conv2d(dims[1], dims[0] * 4, kernel_size=1),
-            nn.PixelShuffle(2)
-        )
-
-        # Stage 1
-        self.ch_reduce1 = nn.Conv2d(dims[0] * 2, dims[0], kernel_size=1)
-        self.fuse1 = nn.Sequential(*[
-            DecoderBlock(dims[0], dims[0], dilations=[1, 2], expand_conv=2, expand_ffn=2)
-            for _ in range(num_blocks[0])
-        ]) if num_blocks[0] > 0 else nn.Identity()
+        self.ch_reduce2 = nn.Conv2d(dims[1] * 2, dims[1], 1, bias=False)
+        self.d2 = nn.Sequential(*[WaveletBlock(dims[1]) for _ in range(num_blocks[1])])
 
     def forward(
         self,
@@ -440,92 +270,90 @@ class Bridge(nn.Module):
         x2: torch.Tensor,
         x3: torch.Tensor,
         x4: torch.Tensor
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         # Stage 4
-        x = self.up4(x4)
-        
+        x = torch.cat([self.up43(x4), x3], dim=1)
+
         # Stage 3
-        x3 = torch.cat([x3, x], dim=1)
-        x3 = self.ch_reduce3(x3)
-        x3 = self.fuse3(x3)
-        x = self.up3(x3)
-        
+        x = self.ch_reduce3(x)
+        x3 = self.d3(x)
+        x = torch.cat([self.up32(x3), x2], dim=1)
+
         # Stage 2
-        x2 = torch.cat([x2, x], dim=1)
-        x2 = self.ch_reduce2(x2)
-        x2 = self.fuse2(x2)
-        x = self.up2(x2)
-        
-        # Stage 1
-        x1 = torch.cat([x1, x], dim=1)
-        x1 = self.ch_reduce1(x1)
-        x1 = self.fuse1(x1)
+        x = self.ch_reduce2(x)
+        x2 = self.d2(x)
+
         return x1, x2, x3, x4
+
+    def get_wavelet_loss(self) -> float:
+        wavelet_loss = 0.
+        for index, _ in enumerate(self.num_blocks):
+            if _ is not None:
+                for block in getattr(self, f'd{index+1}'):
+                    wavelet_loss += block.get_wavelet_loss()
+        return wavelet_loss
+
+
+class DeblurHead(nn.Module):
+    def __init__(self, in_channels: int, out_channels: int):
+        super().__init__()
+        self.block = nn.Conv2d(in_channels, out_channels, 3, stride=1, padding=1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.block(x)
+        return x
 
 
 class Decoder(nn.Module):
-    """Decoder Part"""
     def __init__(
         self,
-        out_channels: int,
-        dim: int,
+        out_channels: int = 3,
+        dim: int = 64,
         expand_dim: float = 2.0,
-        num_blocks: list = [2, 4, 4, 6],
+        num_blocks: list[int] = [2, 4, 4, 6],
         aux_heads: bool = False
     ) -> None:
         # Initialization
-        super(Decoder, self).__init__()
+        super().__init__()
+        dims = [round(dim * expand_dim ** i) for i in range(len(num_blocks))]
+        self.num_blocks = num_blocks
         self.aux_heads = aux_heads
-        dims = [round(dim * (expand_dim ** i)) for i in range(len(num_blocks))]
 
         # Stage 4
-        self.fuse4 = nn.Sequential(*[
-            DecoderBlock(dims[3], dims[3], dilations=[1, 2], expand_conv=2, expand_ffn=2)
-            for _ in range(num_blocks[3])
-        ])
-        self.up4 = nn.Sequential(
-            nn.Conv2d(dims[3], dims[3], kernel_size=3, padding=1, groups=dims[3]),
-            nn.Conv2d(dims[3], dims[2] * 4, kernel_size=1),
+        self.d4 = nn.Sequential(*[WaveletBlock(dims[3]) for _ in range(num_blocks[3])])
+        self.up43 = nn.Sequential(
+            nn.Conv2d(dims[3], dims[2] * 4, 1, bias=False),
             nn.PixelShuffle(2)
         )
 
         # Stage 3
-        self.ch_reduce3 = nn.Conv2d(dims[2] * 2, dims[2], kernel_size=1)
-        self.fuse3 = nn.Sequential(*[
-            DecoderBlock(dims[2], dims[2], dilations=[1, 2], expand_conv=2, expand_ffn=2)
-            for _ in range(num_blocks[2])
-        ])
-        self.up3 = nn.Sequential(
-            nn.Conv2d(dims[2], dims[2], kernel_size=3, padding=1, groups=dims[2]),
-            nn.Conv2d(dims[2], dims[1] * 4, kernel_size=1),
+        self.ch_reduce3 = nn.Conv2d(dims[2] * 2, dims[2], 1, bias=False)
+        self.d3 = nn.Sequential(*[WaveletBlock(dims[2]) for _ in range(num_blocks[2])])
+        self.up32 = nn.Sequential(
+            nn.Conv2d(dims[2], dims[1] * 4, 1, bias=False),
             nn.PixelShuffle(2)
         )
 
         # Stage 2
-        self.ch_reduce2 = nn.Conv2d(dims[1] * 2, dims[1], kernel_size=1)
-        self.fuse2 = nn.Sequential(*[
-            DecoderBlock(dims[1], dims[1], dilations=[1, 2], expand_conv=2, expand_ffn=2)
-            for _ in range(num_blocks[1])
-        ])
-        self.up2 = nn.Sequential(
-            nn.Conv2d(dims[1], dims[1], kernel_size=3, padding=1, groups=dims[1]),
-            nn.Conv2d(dims[1], dims[0] * 4, kernel_size=1),
+        self.ch_reduce2 = nn.Conv2d(dims[1] * 2, dims[1], 1, bias=False)
+        self.d2 = nn.Sequential(*[WaveletBlock(dims[1]) for _ in range(num_blocks[1])])
+        self.up21 = nn.Sequential(
+            nn.Conv2d(dims[1], dims[0] * 4, 1, bias=False),
             nn.PixelShuffle(2)
         )
 
         # Stage 1
-        self.ch_reduce1 = nn.Conv2d(dims[0] * 2, dims[0], kernel_size=1)
-        self.fuse1 = nn.Sequential(*[
-            DecoderBlock(dims[0], dims[0], dilations=[1, 2], expand_conv=2, expand_ffn=2)
-            for _ in range(num_blocks[0])
-        ])
+        self.ch_reduce1 = nn.Conv2d(dims[0] * 2, dims[0], 1, bias=False)
+        self.d1 = nn.Sequential(*[WaveletBlock(dims[0]) for _ in range(num_blocks[0])])
 
-        # Deblurring Heads
-        if aux_heads:
-            self.aux_head4 = nn.Conv2d(dims[3], out_channels, kernel_size=3, padding=1)
-            self.aux_head3 = nn.Conv2d(dims[2], out_channels, kernel_size=3, padding=1)
-            self.aux_head2 = nn.Conv2d(dims[1], out_channels, kernel_size=3, padding=1)
-        self.head = nn.Conv2d(dims[0], out_channels, kernel_size=3, padding=1)
+        # Deblurring heads
+        self.head1 = DeblurHead(dims[0], out_channels)
+        if self.aux_heads:
+            self.head2 = DeblurHead(dims[1], out_channels)
+            self.head3 = DeblurHead(dims[2], out_channels)
+            self.head4 = DeblurHead(dims[3], out_channels)
+
+        self.alpha = nn.Parameter(torch.zeros((1, dims[1], 1, 1)), requires_grad=True)
 
     def forward(
         self,
@@ -533,33 +361,38 @@ class Decoder(nn.Module):
         x2: torch.Tensor,
         x3: torch.Tensor,
         x4: torch.Tensor
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         # Stage 4
-        x4 = self.fuse4(x4)
-        aux4 = self.aux_head4(x4) if self.aux_heads else None
-        x4 = self.up4(x4)
+        x = self.d4(x4)
+        x4 = self.head4(x) if self.aux_heads else None
 
         # Stage 3
-        x3 = torch.cat([x3, x4], dim=1)
-        x3 = self.ch_reduce3(x3)
-        x3 = self.fuse3(x3)
-        aux3 = self.aux_head3(x3) if self.aux_heads else None
-        x3 = self.up3(x3)
+        x = torch.cat([self.up43(x), x3], dim=1)
+        x = self.ch_reduce3(x)
+        x = self.d3(x)
+        x3 = self.head3(x) if self.aux_heads else None
 
         # Stage 2
-        x2 = torch.cat([x2, x3], dim=1)
-        x2 = self.ch_reduce2(x2)
-        x2 = self.fuse2(x2)
-        aux2 = self.aux_head2(x2) if self.aux_heads else None
-        x2 = self.up2(x2)
+        x2_n = x2.contiguous()
+        x = torch.cat([self.up32(x), x2], dim=1)
+        x = self.ch_reduce2(x)
+        x = self.d2(x)
+        x2 = self.head2(x) if self.aux_heads else None
 
         # Stage 1
-        x1 = torch.cat([x1, x2], dim=1)
-        x1 = self.ch_reduce1(x1)
-        x1 = self.fuse1(x1)
-        out = self.head(x1)
+        x = torch.cat([self.up21(x + self.alpha * x2_n), x1], dim=1)
+        x = self.ch_reduce1(x)
+        x = self.d1(x)
+        x1 = self.head1(x)
 
-        return out, aux2, aux3, aux4
+        return x1, x2, x3, x4
+
+    def get_wavelet_loss(self) -> float:
+        wavelet_loss = 0.
+        for index, _ in enumerate(self.num_blocks):
+            for block in getattr(self, f'd{index+1}'):
+                wavelet_loss += block.get_wavelet_loss()
+        return wavelet_loss
 
 
 # ---------------------------------------------------------------------------------------------- #
@@ -568,49 +401,40 @@ class Decoder(nn.Module):
 
 
 class Network(nn.Module):
-    """Lightweight FFT-Based Network for Image Deblurring"""
     def __init__(
         self,
         in_channels: int = 3,
         out_channels: int = 3,
-        dim: int = 32,
+        dim: int = 64,
         expand_dim: float = 2.0,
-        aux_heads: bool = True,
-        use_bridge: bool = True
+        aux_heads: bool = False
     ) -> None:
-        # Initialization
         super(Network, self).__init__()
-
-        # Modules
-        self.embedding = FeatureEmbedding(
-            in_channels=in_channels,
-            out_channels=dim,
-            kernel_size=3,
-            stride=1,
-            padding=1
-        )
         self.encoder = Encoder(
+            in_channels=in_channels,
             dim=dim,
             expand_dim=expand_dim,
-            num_blocks=[1, 2, 4, 24]
+            num_blocks=[1, 2, 4, 16],
         )
-        self.bridge = Bridge(
+        self.fusion = Fusion(
             dim=dim,
-            expand_dim=expand_dim,
-            num_blocks=[0, 2, 2, 0]
-        ) if use_bridge else None
+            num_blocks=[None, 2, 2, None],
+        )
         self.decoder = Decoder(
             out_channels=out_channels,
             dim=dim,
             expand_dim=expand_dim,
-            num_blocks=[2, 3, 4, 6],
+            num_blocks=[2, 2, 2, 2],
             aux_heads=aux_heads
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.embedding(x)
-        x1, x2, x3, x4 = self.encoder(x)
-        if self.bridge is not None:
-            x1, x2, x3, x4 = self.bridge(x1, x2, x3, x4)
-        x1, x2, x3, x4 = self.decoder(x1, x2, x3, x4)
-        return x1, x2, x3, x4
+    def forward(
+        self, x_in: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        x = self.encoder(x_in)
+        x = self.fusion(*x)
+        x1, x2, x3, x4 = self.decoder(*x)
+        return x1 + x_in, x2, x3, x4
+
+    def get_wavelet_loss(self) -> float:
+        return self.fusion.get_wavelet_loss() + self.decoder.get_wavelet_loss()

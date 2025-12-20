@@ -183,7 +183,7 @@ class ShuffleBlock(nn.Module):
 # global count
 # count = 1
 class LWN(nn.Module):
-    def __init__(self, dim, wavelet='haar', initialize=True, head=4, drop_rate=0., use_ca=False, use_sa=False):
+    def __init__(self, dim, wavelet='haar', initialize=True, head=4, drop_rate=0., use_ca=False, use_sa=False, kernel_size=[7]):
         super(LWN, self).__init__()
         self.dim = dim
         self.wavelet = _as_wavelet(wavelet)
@@ -205,7 +205,10 @@ class LWN(nn.Module):
         self.waverec = IDWT(self.rec_lo, self.rec_hi, wavelet=wavelet, level=1)
 
         self.conv1 = nn.Conv2d(dim*4, dim*6, 1)
-        self.conv2 = nn.Conv2d(dim*6, dim*6, 7, padding=3, groups=dim*6)  # dw
+        self.conv2 = nn.Sequential(*[
+            nn.Conv2d(dim*6, dim*6, kernel_size[i], padding=kernel_size[i]//2, groups=dim*6)
+            for i in range(len(kernel_size))
+        ]) if len(kernel_size) > 1 else nn.Conv2d(dim*6, dim*6, kernel_size[0], padding=3, groups=dim*6)  # dw
         self.act = nn.GELU()
         self.conv3 = nn.Conv2d(dim*6, dim*4, 1)
         self.use_sa = use_sa

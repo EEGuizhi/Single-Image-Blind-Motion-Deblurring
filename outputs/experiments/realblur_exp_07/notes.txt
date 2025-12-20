@@ -1,0 +1,9 @@
+Change:
+    - 以 MLWNet 為基本進行改版：
+        - Channel addition -> Channel concatenation + Channel reduction(PW Conv)
+        - 7x7 Conv -> Separable Conv (5x5 + 3x3)
+        - SEB with diverse dilation Conv (d = 1, 2) + Group Simple Gate
+        - Encoder num_blocks reduce (L4): 24 -> 16
+
+Result:
+    - PSNR 約 32dB

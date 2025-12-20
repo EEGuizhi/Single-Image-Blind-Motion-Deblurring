@@ -18,6 +18,7 @@ from tqdm import tqdm
 
 import torch
 import torchvision
+import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 
 import models
@@ -90,6 +91,11 @@ def test(
                 combined_output = combine_patches_torch(prd_patches, full_image_size, start_pos)
                 combined_target = combine_patches_torch(tgt_patches, full_image_size, start_pos)
 
+                combined_output = torch.clamp(combined_output, 0.0, 1.0)
+                # combined_output = torch.round(combined_output * 255.0) / 255.0
+                combined_target = torch.clamp(combined_target, 0.0, 1.0)
+                # combined_target = torch.round(combined_target * 255.0) / 255.0
+
                 # Save random sample outputs
                 if show_images is not None and img_idx.item() in show_images:
                     torchvision.utils.save_image(
@@ -157,8 +163,8 @@ if __name__ == "__main__":
 
     # Load dataset
     test_dataset = RealBlurDataset(
-        split='test', img_type=IMG_TYPE, img_size=IMG_SIZE,
-        overlap=OVERLAP, root=DATASET_ROOT, cache_size=CACHE_SIZE
+        split='test', img_type=IMG_TYPE, img_size=IMG_SIZE, overlap=OVERLAP,
+        root=DATASET_ROOT, cache_size=CACHE_SIZE
     )
     test_loader = DataLoader(
         test_dataset, batch_size=BATCH_SIZE, shuffle=False,
