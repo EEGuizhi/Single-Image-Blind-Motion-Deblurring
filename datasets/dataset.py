@@ -51,7 +51,7 @@ def padding(
 class RealBlurDataset(Dataset):
     """RealBlur Dataset for Blind Motion Image Deblurring Task
     Args:
-        split (str): 'train', 'val' or 'test'.
+        split (str): 'train' or 'test'.
         img_type (str): 'J' for RealBlur-J, 'R' for RealBlur-R. Default: 'J'.
         orig_size (bool): Whether to use original images size. Default: False.
         img_size (tuple[int, int]): Image size (H, W). Default: (256, 256).

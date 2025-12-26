@@ -11,12 +11,12 @@ ROOT = "./pretrain_weights"
 # file_name = "gopro-width64.pth"
 
 # # RealBlur-J width 64
-url = "https://drive.usercontent.google.com/open?id=1lv3MCJgZUWgITUFNvgY8nU9YlpgE050W&authuser=0"
-file_name = "realblur_j-width64.pth"
+# url = "https://drive.usercontent.google.com/open?id=1lv3MCJgZUWgITUFNvgY8nU9YlpgE050W&authuser=0"
+# file_name = "realblur_j-width64.pth"
 
 # # RealBlur-J width 32
-# url = "https://drive.usercontent.google.com/open?id=1WYhczcWj9vPn-C3fCfLk5Tq0GkD3ylY3&authuser=0"
-# file_name = "realblur_j-width32.pth"
+url = "https://drive.usercontent.google.com/open?id=1WYhczcWj9vPn-C3fCfLk5Tq0GkD3ylY3&authuser=0"
+file_name = "realblur_j-width32.pth"
 
 # RealBlur-R width 64
 # url = "https://drive.usercontent.google.com/open?id=1hp4Qu2n_lOmc7LsSOHYjf4NhUzZtskGP&authuser=0"
@@ -40,5 +40,5 @@ if __name__ == "__main__":
         print(f">> Change working directory to {ROOT}")
 
     print(f">> Downloading {file_name} from Google Drive...")
-    download_from_google_drive(url, f"{ROOT}/{file_name}")
+    download_from_google_drive(url, file_name)
     print(">> Done.")
