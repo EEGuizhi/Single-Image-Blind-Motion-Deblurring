@@ -23,7 +23,7 @@ from utils.misc import *
 if __name__ == "__main__":
     # Initialization
     SUMMARY_PATH = (
-        OUTPUT_DIR
+        f"{OUTPUT_DIR}/summaries"
         + f"/summary"
         + f"_{SUMMARY_CONFIG['model_name']}"
         + f"_d{SUMMARY_CONFIG['model_dim']}"

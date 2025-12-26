@@ -120,3 +120,50 @@ def combine_patches_torch(
     combined_image = full_image / weight_matrix
 
     return combined_image
+
+
+def combine_patches_center_weighted(
+    patches: torch.Tensor,
+    image_size: tuple,
+    start_pos: torch.Tensor,
+    sigma: float = 0.25,
+):
+    """
+    patches: (N, C, Hp, Wp)
+    start_pos: (N, 2) top-left of each patch in full image
+    sigma: relative std (0~0.5), smaller = more center-focused
+    """
+    H, W = image_size
+    N, C, Hp, Wp = patches.shape
+    device = patches.device
+
+    # full image coord grid
+    yy, xx = torch.meshgrid(
+        torch.arange(H, device=device),
+        torch.arange(W, device=device),
+        indexing="ij"
+    )
+
+    full_image = torch.zeros((C, H, W), device=device)
+    weight_sum = torch.zeros((1, H, W), device=device)
+
+    for i in range(N):
+        sh, sw = start_pos[i]
+        eh, ew = sh + Hp, sw + Wp
+
+        # patch center in full image coords
+        cy = sh + Hp // 2
+        cx = sw + Wp // 2
+
+        # distance to center
+        dist2 = (yy[sh:eh, sw:ew] - cy) ** 2 + (xx[sh:eh, sw:ew] - cx) ** 2
+
+        # Gaussian weight
+        sigma_pix = sigma * max(Hp, Wp)
+        weight = torch.exp(-dist2 / (2 * sigma_pix ** 2))  # (Hp, Wp)
+
+        full_image[:, sh:eh, sw:ew] += patches[i] * weight
+        weight_sum[:, sh:eh, sw:ew] += weight
+
+    weight_sum = torch.clamp(weight_sum, min=1e-8)
+    return full_image / weight_sum

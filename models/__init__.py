@@ -13,10 +13,12 @@ import torch
 import torch.nn as nn
 
 from .MLWNet import MLWNet_Local, MLWNet
+from .FFTformer import fftformer
 from .network import Network
+from .HybridNet import HybridNet
 
 
-__all__ = ['MLWNet_Local', 'MLWNet', 'Network']
+__all__ = ['MLWNet_Local', 'MLWNet', 'FFTformer', 'Network', 'HybridNet']
 
 
 def load_model(model_name: str, **kwargs) -> nn.Module:
@@ -33,11 +35,20 @@ def load_model(model_name: str, **kwargs) -> nn.Module:
     elif model_name == 'MLWNet':
         dim = kwargs.get('dim', 32)
         return MLWNet(dim=dim)
+    elif model_name == 'FFTformer':
+        dim = kwargs.get('dim', 48)
+        num_blocks = kwargs.get('num_blocks', [6, 6, 12])
+        return fftformer(dim=dim, num_blocks=num_blocks)
     elif model_name == 'Network':
         dim = kwargs.get('dim', 32)
         expand_dim = kwargs.get('expand_dim', 2)
         aux_heads = kwargs.get('aux_heads', True)
         return Network(dim=dim, expand_dim=expand_dim, aux_heads=aux_heads)
+    elif model_name == 'HybridNet':
+        dim = kwargs.get('dim', 32)
+        expand_dim = kwargs.get('expand_dim', 2)
+        aux_heads = kwargs.get('aux_heads', True)
+        return HybridNet(dim=dim, expand_dim=expand_dim, aux_heads=aux_heads)
     else:
         raise ValueError(f"Model '{model_name}' is not recognized.")
 

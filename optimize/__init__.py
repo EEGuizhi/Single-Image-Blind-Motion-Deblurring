@@ -15,7 +15,7 @@ from .scheduler import *
 
 __all__ = [
     # Loss Functions
-    'L1Loss', 'MSELoss', 'PSNRLoss', 'SIMOLoss', 'EdgeLoss',
+    'CustomLoss', 'L1Loss', 'MSELoss', 'PSNRLoss', 'SIMOLoss', 'EdgeLoss', 'FFTLoss',
 
     # Optimizers
     'Optimizer',

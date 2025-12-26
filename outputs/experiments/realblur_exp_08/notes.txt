@@ -1,0 +1,1 @@
+Fine-tune on 512x512

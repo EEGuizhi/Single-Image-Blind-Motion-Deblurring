@@ -10,6 +10,9 @@ Description:
 """
 
 import os
+import torch
+import torchvision
+
 
 class logger:
     """Simple logger to log messages to both console and a file.
@@ -84,6 +87,21 @@ class csv_logger:
         with open(self.csv_file, 'a') as f:
             line = ','.join([str(epoch_dict[key.lower().replace(' ', '_')]) for key in self.dict_keys])
             f.write(line + '\n')
+
+
+def save_image_tensor(image_tensor: torch.Tensor, path: str) -> None:
+    """Save a tensor as an image file.
+    Args:
+        image_tensor (torch.Tensor): Image tensor of shape (C, H, W) or (B, C, H, W) with values in [0, 1].
+        path (str): Path to save the image file.
+    """
+    if image_tensor.dim() == 4:
+        assert image_tensor.size(0) == 1, "Only single image tensor is supported."
+        image_tensor = image_tensor.squeeze(0)
+    image_tensor = image_tensor.clamp(0, 1)
+    if os.path.exists(os.path.dirname(path)) is False:
+        os.makedirs(os.path.dirname(path))
+    torchvision.utils.save_image(image_tensor, path)
 
 
 if __name__ == "__main__":

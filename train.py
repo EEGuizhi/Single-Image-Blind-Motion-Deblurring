@@ -38,7 +38,8 @@ def train_epoch(
     criterion: nn.Module,
     optimizer: optim.Optimizer,
     device: torch.device,
-    scheduler: optim.lr_scheduler._LRScheduler = None
+    scheduler: optim.lr_scheduler._LRScheduler = None,
+    accumulated_iter: int = 0
 ) -> dict:
     """Training loop for one epoch.
     Args:
@@ -62,28 +63,31 @@ def train_epoch(
             targets = batch_data[1].to(device)
 
             # Forward pass
-            optimizer.zero_grad()
             outputs = model(inputs)
 
             # Compute loss
             loss = criterion(outputs, targets)
             if hasattr(model, 'get_wavelet_loss'):
                 loss += model.get_wavelet_loss()
-            if EDGE_LOSS:
-                loss += EdgeLoss()(outputs[0], targets)
             pbar.set_postfix({"loss": loss.item()})
 
             # Backward pass and optimize
+            loss = loss / ACCUM_ITER
             loss.backward()
-            optimizer.step()
-            if scheduler is not None:
-                scheduler.step()
+            accumulated_iter += 1
+
+            if accumulated_iter >= ACCUM_ITER:
+                accumulated_iter = 0
+                optimizer.step()
+                optimizer.zero_grad()
+                if scheduler is not None:
+                    scheduler.step()
 
             total_loss += loss.item()
             num_batches += 1
 
-    avg_loss = total_loss / num_batches
-    return {"train_loss": avg_loss}
+    avg_loss = total_loss / num_batches * ACCUM_ITER
+    return {"train_loss": avg_loss}, accumulated_iter
 
 
 def val_epoch(
@@ -122,11 +126,14 @@ def val_epoch(
                 pbar.set_postfix({"loss": loss.item()})
 
                 # Compute PSNR and SSIM
-                psnr = psnr_torch(outputs[0], targets)
-                ssim = ssim_torch(outputs[0], targets)
+                mo = isinstance(outputs, (list, tuple))
+                psnr = psnr_torch(outputs[0] if mo else outputs, targets)
+                ssim = ssim_torch(outputs[0] if mo else outputs, targets)
 
                 # Accumulate metrics
                 total_loss += loss.item()
+                if hasattr(model, 'get_wavelet_loss'):
+                    total_loss += model.get_wavelet_loss().item()
                 running_psnr += psnr
                 running_ssim += ssim
                 num_batches += 1
@@ -191,12 +198,12 @@ if __name__ == "__main__":
     RAND_CROP   = TRAIN_CONFIG["rand_crop"]
     NUM_EPOCHS  = TRAIN_CONFIG["num_epochs"]
     BATCH_SIZE  = TRAIN_CONFIG["batch_size"]
+    ACCUM_ITER  = TRAIN_CONFIG["accum_iter"]
     LR          = TRAIN_CONFIG["learning_rate"]
-    SIMO_LOSS   = TRAIN_CONFIG["simo_loss"]
-    EDGE_LOSS   = TRAIN_CONFIG["edge_loss"]
     OPTIMIZER   = TRAIN_CONFIG["optimizer"]
     SCHEDULER   = TRAIN_CONFIG["scheduler"]
     METRIC      = TRAIN_CONFIG["metric"]
+    VAL_EPOCHS  = TRAIN_CONFIG["val_interval"]
     CHECKPOINT  = TRAIN_CONFIG["checkpoint"]
     WGT_ONLY    = TRAIN_CONFIG["weight_only"]
     NUM_WORKERS = TRAIN_CONFIG["num_workers"]
@@ -248,6 +255,7 @@ if __name__ == "__main__":
         rand_crop=RAND_CROP,
         num_workers=NUM_WORKERS
     )
+    iter_per_epoch = len(train_loader)
 
     # Load model
     model = models.load_model(MODEL_NAME, dim=MODEL_DIM)
@@ -256,9 +264,12 @@ if __name__ == "__main__":
     log.print_log(f"Training on device: {DEVICE}\n")
 
     # Loss function and optimizer
-    criterion = SIMOLoss()
+    criterion = CustomLoss(TRAIN_CONFIG)
     optimizer = Optimizer.get_optimizer(OPTIMIZER, model.parameters(), LR)
-    scheduler = Scheduler.get_scheduler(SCHEDULER, optimizer, mode='max')  # PSNR is to be maximized
+    scheduler = Scheduler.get_scheduler(
+        SCHEDULER, optimizer, mode='max',  # PSNR is to be maximized
+        T_max=NUM_EPOCHS * iter_per_epoch // ACCUM_ITER,
+    )
 
     # Load checkpoint if provided
     if continue_training:
@@ -273,23 +284,25 @@ if __name__ == "__main__":
         log.print_log("No checkpoint provided, starting training from scratch.\n")
 
     # ---------------------------------- Training loop ---------------------------------- #
+    accumulated_iter = 0
     for epoch in range(start_epoch, NUM_EPOCHS + 1):
         start_epoch_time = time.time()
         epoch_dict = {"epoch": epoch, "num_epochs": NUM_EPOCHS, 'best_eval': best_eval}
 
         # Train for one epoch
-        train_dict = train_epoch(
+        train_dict, accumulated_iter = train_epoch(
             model,
             train_loader,
             criterion,
             optimizer,
             DEVICE,
-            scheduler if SCHEDULER != 'ReduceLROnPlateau' else None
+            scheduler if SCHEDULER != 'ReduceLROnPlateau' else None,
+            accumulated_iter
         )
         epoch_dict.update(train_dict)
 
         # Validate for one epoch
-        if epoch % 15 == 0 or epoch == 1 or epoch == NUM_EPOCHS:
+        if epoch % VAL_EPOCHS == 0 or epoch == NUM_EPOCHS or "val_dict" not in locals():
             # Update val_dict
             val_dict = val_epoch(model, test_loader, criterion, DEVICE)
         else:

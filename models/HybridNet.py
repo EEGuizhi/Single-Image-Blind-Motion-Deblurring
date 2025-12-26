@@ -29,60 +29,51 @@ class EncoderBlock(nn.Module):
     def __init__(
         self,
         in_channels: int,
-        out_channels: int = None,
         kernel_size: int = 3,
-        stride: int = 1,
         dilations: list[int] = [1],
         expand_conv: float = 2.0,
-        expand_ffn: float = 2.0
+        expand_ffn: float = 2.0,
+        drop_out_rate: float = 0.0
     ) -> None:
         # Initialization
-        super(EncoderBlock, self).__init__()
-        out_channels = in_channels if out_channels is None else out_channels
+        super().__init__()
         dw_channels  = round(in_channels * expand_conv)
         ffn_channels = round(in_channels * expand_ffn)
         mid_channels = [dw_channels // 2, ffn_channels // 2]
 
         # Convolutional Layers
-        self.conv1_pw = nn.Conv2d(in_channels, dw_channels, kernel_size=1, stride=1, padding=0)
-        # self.conv2_dw = nn.Conv2d(
-        #     dw_channels, dw_channels, kernel_size=kernel_size,
-        #     stride=stride, padding=padding, dilation=dilation, groups=dw_channels
+        self.conv1 = nn.Conv2d(in_channels, dw_channels, 1, padding=0, stride=1, bias=True)
+        # self.conv2 = nn.Conv2d(
+        #     in_channels=dw_channels, out_channels=dw_channels, kernel_size=3,
+        #     padding=1, stride=1, groups=dw_channels, bias=True
         # )
-        self.conv2_dw = self._make_dwconv_layers(
-            channels=dw_channels,
-            kernel_size=kernel_size,
-            stride=stride,
-            dilations=dilations
+        self.conv2 = self._make_dwconv_layers(
+            channels=dw_channels, kernel_size=kernel_size, stride=1, dilations=dilations
         )
-        self.conv3_pw = nn.Conv2d(mid_channels[0], in_channels, kernel_size=1, stride=1, padding=0)
-        self.conv4_pw = nn.Conv2d(in_channels, ffn_channels, kernel_size=1, stride=1, padding=0)
-        self.conv5_pw = nn.Conv2d(mid_channels[1], out_channels, kernel_size=1, stride=1, padding=0)
+        self.conv3 = nn.Conv2d(mid_channels[0], in_channels, 1, stride=1, padding=0, bias=True)
+        self.conv4 = nn.Conv2d(in_channels, ffn_channels, 1, padding=0, stride=1, bias=True)
+        self.conv5 = nn.Conv2d(mid_channels[1], in_channels, 1, padding=0, stride=1, bias=True)
 
         # Simplified Channel Attention
         self.sca = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(
-                in_channels=mid_channels[0], out_channels=mid_channels[0],
-                kernel_size=1, stride=1, padding=0
-            )
+            nn.Conv2d(mid_channels[0], mid_channels[0], 1, padding=0, stride=1, bias=True)
         )
 
-        # Shortcut Layers
-        self.shortcut1 = (
-            nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=stride, bias=False)
-            if stride != 1 else nn.Identity()
-        )
-        self.shortcut2 = (
-            nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False)
-            if in_channels != out_channels else nn.Identity()
-        )
-
-        # Activation (Simple Gate) and Normalization
+        # Activations
         self.gate1 = GroupSimpleGate(group=len(dilations))
         self.gate2 = GroupSimpleGate()
+
+        # Normalizations
         self.norm1 = LayerNorm2d(in_channels)
         self.norm2 = LayerNorm2d(in_channels)
+
+        # Dropouts
+        self.dropout1 = nn.Dropout(drop_out_rate) if drop_out_rate > 0. else nn.Identity()
+        self.dropout2 = nn.Dropout(drop_out_rate) if drop_out_rate > 0. else nn.Identity()
+
+        self.beta = nn.Parameter(torch.zeros((1, in_channels, 1, 1)), requires_grad=True)
+        self.gamma = nn.Parameter(torch.zeros((1, in_channels, 1, 1)), requires_grad=True)
 
     def _make_dwconv_layers(
         self,
@@ -104,31 +95,32 @@ class EncoderBlock(nn.Module):
             )
         return dwconv_layers
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x_in: torch.Tensor) -> torch.Tensor:
         # ----------------- Part I ----------------- #
-        residual = self.shortcut1(x)
+        x = x_in
         x = self.norm1(x)
-        x = self.conv1_pw(x)
+        x = self.conv1(x)
 
         # Split channels for different dilated convolutions
-        x_splits = torch.chunk(x, len(self.conv2_dw), dim=1)
-        x_dwconv = [conv(x_split) for conv, x_split in zip(self.conv2_dw, x_splits)]
+        x_splits = torch.chunk(x, len(self.conv2), dim=1)
+        x_dwconv = [conv(x_split) for conv, x_split in zip(self.conv2, x_splits)]
         x = torch.cat(x_dwconv, dim=1)
 
         x = self.gate1(x)
         x = self.sca(x) * x
-        x = self.conv3_pw(x)
-        x += residual
+        x = self.conv3(x)
+
+        x = self.dropout1(x)
+        y = x_in + self.beta * x
 
         # ----------------- Part II ----------------- #
-        residual = self.shortcut2(x)
-        x = self.norm2(x)
-        x = self.conv4_pw(x)
+        x = self.norm2(y)
+        x = self.conv4(x)
         x = self.gate2(x)
-        x = self.conv5_pw(x)
-        x += residual
+        x = self.conv5(x)
 
-        return x
+        x = self.dropout2(x)
+        return y + x * self.gamma
 
 
 class DFFN(nn.Module):
@@ -205,40 +197,44 @@ class DecoderBlock(nn.Module):
         self,
         in_channels: int,
         out_channels: int = None,
-        kernel_size: int = 5,
+        kernel_size: int = [3, 3],
         stride: int = 1,
-        dilations: list[int] = [1],
-        expand_conv: float = 2.0,
+        # dilations: list[int] = [1],
+        expand_conv: float = 4.0,
         expand_ffn: float = 2.0
     ) -> None:
         # Initialization
         super(DecoderBlock, self).__init__()
         out_channels = in_channels if out_channels is None else out_channels
         dw_channels  = round(in_channels * expand_conv)
-        ffn_channels = round(in_channels * expand_ffn)
-        mid_channels = [dw_channels // 2, ffn_channels // 2]
+        # ffn_channels = round(in_channels * expand_ffn)
+        # mid_channels = [dw_channels // 2, ffn_channels // 2]
 
         # Convolutional Layers
         self.conv1_pw = nn.Conv2d(in_channels, dw_channels, kernel_size=1, stride=1, padding=0)
-        self.conv2_dw = self._make_dwconv_layers(
-            channels=dw_channels,
-            kernel_size=kernel_size,
-            stride=stride,
-            dilations=dilations
-        )
-        self.conv3_pw = nn.Conv2d(mid_channels[0], in_channels, kernel_size=1, stride=1, padding=0)
+        # self.conv2_dw = self._make_dwconv_layers(
+        #     channels=dw_channels,
+        #     kernel_size=kernel_size,
+        #     stride=stride,
+        #     dilations=dilations
+        # )
+        self.conv2_pw = nn.Sequential(*[
+            nn.Conv2d(dw_channels, dw_channels, kernel_size[i], padding=kernel_size[i]//2, groups=dw_channels)
+            for i in range(len(kernel_size))
+        ]) if len(kernel_size) > 1 else nn.Conv2d(dw_channels, dw_channels, kernel_size[0], padding=kernel_size[0]//2, groups=dw_channels)  # dw
+        self.conv3_pw = nn.Conv2d(dw_channels, in_channels, kernel_size=1, stride=1, padding=0)
 
         # Feed-forward Network
         self.ffn = DFFN(in_channels, expand_ffn=expand_ffn)
 
-        # Simplified Channel Attention
-        self.sca = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(
-                in_channels=mid_channels[0], out_channels=mid_channels[0],
-                kernel_size=1, stride=1, padding=0
-            )
-        )
+        # # Simplified Channel Attention
+        # self.sca = nn.Sequential(
+        #     nn.AdaptiveAvgPool2d(1),
+        #     nn.Conv2d(
+        #         in_channels=mid_channels[0], out_channels=mid_channels[0],
+        #         kernel_size=1, stride=1, padding=0
+        #     )
+        # )
 
         # Shortcut Layers
         self.shortcut1 = (
@@ -251,29 +247,31 @@ class DecoderBlock(nn.Module):
         )
 
         # Activation (Simple Gate) and Normalization
-        self.gate1 = GroupSimpleGate(group=len(dilations))
+        self.gelu = nn.GELU()
         self.norm1 = LayerNorm2d(in_channels)
         self.norm2 = LayerNorm2d(in_channels)
+        self.beta = nn.Parameter(torch.zeros((1, in_channels, 1, 1)), requires_grad=True)
+        self.gamma = nn.Parameter(torch.zeros((1, in_channels, 1, 1)), requires_grad=True)
 
-    def _make_dwconv_layers(
-        self,
-        channels: int,
-        kernel_size: int,
-        stride: int,
-        dilations: list[int]
-    ) -> nn.ModuleList:
-        assert channels % len(dilations) == 0, "Channels must be divisible by the number of dilations."
-        sub_ch = channels // len(dilations)
-        dwconv_layers = nn.ModuleList()
-        for d in dilations:
-            p = ((kernel_size - 1) * d) // 2
-            dwconv_layers.append(
-                nn.Conv2d(
-                    sub_ch, sub_ch, kernel_size=kernel_size,
-                    stride=stride, padding=p, dilation=d, groups=sub_ch
-                )
-            )
-        return dwconv_layers
+    # def _make_dwconv_layers(
+    #     self,
+    #     channels: int,
+    #     kernel_size: int,
+    #     stride: int,
+    #     dilations: list[int]
+    # ) -> nn.ModuleList:
+    #     assert channels % len(dilations) == 0, "Channels must be divisible by the number of dilations."
+    #     sub_ch = channels // len(dilations)
+    #     dwconv_layers = nn.ModuleList()
+    #     for d in dilations:
+    #         p = ((kernel_size - 1) * d) // 2
+    #         dwconv_layers.append(
+    #             nn.Conv2d(
+    #                 sub_ch, sub_ch, kernel_size=kernel_size,
+    #                 stride=stride, padding=p, dilation=d, groups=sub_ch
+    #             )
+    #         )
+    #     return dwconv_layers
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # ----------------- Part I ----------------- #
@@ -281,21 +279,23 @@ class DecoderBlock(nn.Module):
         x = self.norm1(x)
         x = self.conv1_pw(x)
 
-        # Split channels for different dilated convolutions
-        x_splits = torch.chunk(x, len(self.conv2_dw), dim=1)
-        x_dwconv = [conv(x_split) for conv, x_split in zip(self.conv2_dw, x_splits)]
-        x = torch.cat(x_dwconv, dim=1)
+        # # Split channels for different dilated convolutions
+        # x_splits = torch.chunk(x, len(self.conv2_dw), dim=1)
+        # x_dwconv = [conv(x_split) for conv, x_split in zip(self.conv2_dw, x_splits)]
+        # x = torch.cat(x_dwconv, dim=1)
+        x = self.conv2_pw(x)
 
-        x = self.gate1(x)
-        x = self.sca(x) * x
+        # x = self.gate1(x)
+        x = self.gelu(x)
+        # x = self.sca(x) * x
         x = self.conv3_pw(x)
-        x += residual
+        x = residual + self.beta * x
 
         # ----------------- Part II ----------------- #
         residual = self.shortcut2(x)
         x = self.norm2(x)
         x = self.ffn(x)
-        x += residual
+        x = residual + self.gamma * x
 
         return x
 
@@ -343,28 +343,28 @@ class Encoder(nn.Module):
 
         # Stage 1
         self.fuse1 = nn.Sequential(*[
-            EncoderBlock(dims[0], dims[0], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            EncoderBlock(dims[0], dilations=[1, 2], expand_conv=2, expand_ffn=2)
             for _ in range(num_blocks[0])
         ])
         self.down1 = nn.Conv2d(dims[0], dims[1], kernel_size=2, stride=2)
 
         # Stage 2
         self.fuse2 = nn.Sequential(*[
-            EncoderBlock(dims[1], dims[1], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            EncoderBlock(dims[1], dilations=[1, 2], expand_conv=2, expand_ffn=2)
             for _ in range(num_blocks[1])
         ])
         self.down2 = nn.Conv2d(dims[1], dims[2], kernel_size=2, stride=2)
 
         # Stage 3
         self.fuse3 = nn.Sequential(*[
-            EncoderBlock(dims[2], dims[2], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            EncoderBlock(dims[2], dilations=[1, 2], expand_conv=2, expand_ffn=2)
             for _ in range(num_blocks[2])
         ])
         self.down3 = nn.Conv2d(dims[2], dims[3], kernel_size=2, stride=2)
 
         # Stage 4
         self.fuse4 = nn.Sequential(*[
-            EncoderBlock(dims[3], dims[3], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            EncoderBlock(dims[3], dilations=[1, 2], expand_conv=2, expand_ffn=2)
             for _ in range(num_blocks[3])
         ])
 
@@ -398,7 +398,7 @@ class Bridge(nn.Module):
 
         # Stage 4
         self.up4 = nn.Sequential(
-            nn.Conv2d(dims[3], dims[3], kernel_size=3, padding=1, groups=dims[3]),
+            # nn.Conv2d(dims[3], dims[3], kernel_size=3, padding=1, groups=dims[3]),
             nn.Conv2d(dims[3], dims[2] * 4, kernel_size=1),
             nn.PixelShuffle(2)
         )
@@ -406,11 +406,12 @@ class Bridge(nn.Module):
         # Stage 3
         self.ch_reduce3 = nn.Conv2d(dims[2] * 2, dims[2], kernel_size=1)
         self.fuse3 = nn.Sequential(*[
-            DecoderBlock(dims[2], dims[2], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            # DecoderBlock(dims[2], dims[2], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            DecoderBlock(dims[2])
             for _ in range(num_blocks[2])
         ])
         self.up3 = nn.Sequential(
-            nn.Conv2d(dims[2], dims[2], kernel_size=3, padding=1, groups=dims[2]),
+            # nn.Conv2d(dims[2], dims[2], kernel_size=3, padding=1, groups=dims[2]),
             nn.Conv2d(dims[2], dims[1] * 4, kernel_size=1),
             nn.PixelShuffle(2)
         )
@@ -418,11 +419,12 @@ class Bridge(nn.Module):
         # Stage 2
         self.ch_reduce2 = nn.Conv2d(dims[1] * 2, dims[1], kernel_size=1)
         self.fuse2 = nn.Sequential(*[
-            DecoderBlock(dims[1], dims[1], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            # DecoderBlock(dims[1], dims[1], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            DecoderBlock(dims[1])
             for _ in range(num_blocks[1])
         ])
         self.up2 = nn.Sequential(
-            nn.Conv2d(dims[1], dims[1], kernel_size=3, padding=1, groups=dims[1]),
+            # nn.Conv2d(dims[1], dims[1], kernel_size=3, padding=1, groups=dims[1]),
             nn.Conv2d(dims[1], dims[0] * 4, kernel_size=1),
             nn.PixelShuffle(2)
         )
@@ -430,7 +432,8 @@ class Bridge(nn.Module):
         # Stage 1
         self.ch_reduce1 = nn.Conv2d(dims[0] * 2, dims[0], kernel_size=1)
         self.fuse1 = nn.Sequential(*[
-            DecoderBlock(dims[0], dims[0], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            # DecoderBlock(dims[0], dims[0], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            DecoderBlock(dims[0])
             for _ in range(num_blocks[0])
         ]) if num_blocks[0] > 0 else nn.Identity()
 
@@ -480,11 +483,12 @@ class Decoder(nn.Module):
 
         # Stage 4
         self.fuse4 = nn.Sequential(*[
-            DecoderBlock(dims[3], dims[3], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            # DecoderBlock(dims[3], dims[3], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            DecoderBlock(dims[3])
             for _ in range(num_blocks[3])
         ])
         self.up4 = nn.Sequential(
-            nn.Conv2d(dims[3], dims[3], kernel_size=3, padding=1, groups=dims[3]),
+            # nn.Conv2d(dims[3], dims[3], kernel_size=3, padding=1, groups=dims[3]),
             nn.Conv2d(dims[3], dims[2] * 4, kernel_size=1),
             nn.PixelShuffle(2)
         )
@@ -492,11 +496,12 @@ class Decoder(nn.Module):
         # Stage 3
         self.ch_reduce3 = nn.Conv2d(dims[2] * 2, dims[2], kernel_size=1)
         self.fuse3 = nn.Sequential(*[
-            DecoderBlock(dims[2], dims[2], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            # DecoderBlock(dims[2], dims[2], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            DecoderBlock(dims[2])
             for _ in range(num_blocks[2])
         ])
         self.up3 = nn.Sequential(
-            nn.Conv2d(dims[2], dims[2], kernel_size=3, padding=1, groups=dims[2]),
+            # nn.Conv2d(dims[2], dims[2], kernel_size=3, padding=1, groups=dims[2]),
             nn.Conv2d(dims[2], dims[1] * 4, kernel_size=1),
             nn.PixelShuffle(2)
         )
@@ -504,11 +509,12 @@ class Decoder(nn.Module):
         # Stage 2
         self.ch_reduce2 = nn.Conv2d(dims[1] * 2, dims[1], kernel_size=1)
         self.fuse2 = nn.Sequential(*[
-            DecoderBlock(dims[1], dims[1], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            # DecoderBlock(dims[1], dims[1], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            DecoderBlock(dims[1])
             for _ in range(num_blocks[1])
         ])
         self.up2 = nn.Sequential(
-            nn.Conv2d(dims[1], dims[1], kernel_size=3, padding=1, groups=dims[1]),
+            # nn.Conv2d(dims[1], dims[1], kernel_size=3, padding=1, groups=dims[1]),
             nn.Conv2d(dims[1], dims[0] * 4, kernel_size=1),
             nn.PixelShuffle(2)
         )
@@ -516,7 +522,8 @@ class Decoder(nn.Module):
         # Stage 1
         self.ch_reduce1 = nn.Conv2d(dims[0] * 2, dims[0], kernel_size=1)
         self.fuse1 = nn.Sequential(*[
-            DecoderBlock(dims[0], dims[0], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            # DecoderBlock(dims[0], dims[0], dilations=[1, 2], expand_conv=2, expand_ffn=2)
+            DecoderBlock(dims[0])
             for _ in range(num_blocks[0])
         ])
 
@@ -567,8 +574,7 @@ class Decoder(nn.Module):
 # ---------------------------------------------------------------------------------------------- #
 
 
-class Network(nn.Module):
-    """Lightweight FFT-Based Network for Image Deblurring"""
+class HybridNet(nn.Module):
     def __init__(
         self,
         in_channels: int = 3,
@@ -579,7 +585,7 @@ class Network(nn.Module):
         use_bridge: bool = True
     ) -> None:
         # Initialization
-        super(Network, self).__init__()
+        super(HybridNet, self).__init__()
 
         # Modules
         self.embedding = FeatureEmbedding(
@@ -592,7 +598,7 @@ class Network(nn.Module):
         self.encoder = Encoder(
             dim=dim,
             expand_dim=expand_dim,
-            num_blocks=[1, 2, 4, 24]
+            num_blocks=[1, 2, 4, 16]
         )
         self.bridge = Bridge(
             dim=dim,
@@ -603,14 +609,14 @@ class Network(nn.Module):
             out_channels=out_channels,
             dim=dim,
             expand_dim=expand_dim,
-            num_blocks=[2, 3, 4, 6],
+            num_blocks=[2, 3, 4, 5],
             aux_heads=aux_heads
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.embedding(x)
+    def forward(self, x_in: torch.Tensor) -> torch.Tensor:
+        x = self.embedding(x_in)
         x1, x2, x3, x4 = self.encoder(x)
         if self.bridge is not None:
             x1, x2, x3, x4 = self.bridge(x1, x2, x3, x4)
         x1, x2, x3, x4 = self.decoder(x1, x2, x3, x4)
-        return x1, x2, x3, x4
+        return x1 + x_in, x2, x3, x4

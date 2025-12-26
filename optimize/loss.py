@@ -49,6 +49,39 @@ class MSELoss(nn.Module):
         return self.loss_weight * F.mse_loss(pred, target, reduction=self.reduction)
 
 
+class FFTLoss(nn.Module):
+    """L1 loss in frequency domain with FFT.
+
+    Args:
+        loss_weight (float): Loss weight for FFT loss. Default: 1.0.
+        reduction (str): Specifies the reduction to apply to the output.
+            Supported choices are 'none' | 'mean' | 'sum'. Default: 'mean'.
+    """
+
+    def __init__(self, loss_weight=0.1, reduction='mean'):
+        super(FFTLoss, self).__init__()
+        if reduction not in ['none', 'mean', 'sum']:
+            raise ValueError(f'Unsupported reduction mode: {reduction}. ')
+
+        self.loss_weight = loss_weight
+        self.reduction = reduction
+
+    def forward(self, pred, target, weight=None, **kwargs):
+        """
+        Args:
+            pred (Tensor): of shape (..., C, H, W). Predicted tensor.
+            target (Tensor): of shape (..., C, H, W). Ground truth tensor.
+            weight (Tensor, optional): of shape (..., C, H, W). Element-wise
+                weights. Default: None.
+        """
+
+        pred_fft = torch.fft.fft2(pred, dim=(-2, -1))
+        pred_fft = torch.stack([pred_fft.real, pred_fft.imag], dim=-1)
+        target_fft = torch.fft.fft2(target, dim=(-2, -1))
+        target_fft = torch.stack([target_fft.real, target_fft.imag], dim=-1)
+        return self.loss_weight * l1_loss(pred_fft, target_fft, weight, reduction=self.reduction)
+
+
 class PSNRLoss(nn.Module):
     """PSNR Loss Function"""
     def __init__(self, loss_weight: float=1.0, reduction: str='mean'):
@@ -148,3 +181,40 @@ class EdgeLoss(nn.Module):
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         loss = self.loss(self.laplacian_kernel(x), self.laplacian_kernel(y))
         return self.weight * loss
+
+
+class CustomLoss(nn.Module):
+    def __init__(
+        self, config: dict
+    ) -> None:
+        super(CustomLoss, self).__init__()
+        if config.get('simo_loss', False):
+            self.simo_loss = SIMOLoss()
+        if config.get('edge_loss', False):
+            self.edge_loss = EdgeLoss()
+        if config.get('l1_loss', False):
+            self.l1_loss = L1Loss()
+        if config.get('mse_loss', False):
+            self.mse_loss = MSELoss()
+        if config.get('fft_loss', False):
+            self.fft_loss = FFTLoss()
+
+    def forward(
+        self,
+        pred: torch.Tensor | list[torch.Tensor],
+        target: torch.Tensor
+    ) -> torch.Tensor:
+        total_loss = 0.0
+        mo = isinstance(pred, (list, tuple))
+        if hasattr(self, 'simo_loss'):
+            assert mo, "SIMO loss requires multiple outputs."
+            total_loss += self.simo_loss(pred, target)
+        if hasattr(self, 'edge_loss'):
+            total_loss += self.edge_loss(pred[0] if mo else pred, target)
+        if hasattr(self, 'l1_loss'):
+            total_loss += self.l1_loss(pred[0] if mo else pred, target)
+        if hasattr(self, 'mse_loss'):
+            total_loss += self.mse_loss(pred[0] if mo else pred, target)
+        if hasattr(self, 'fft_loss'):
+            total_loss += self.fft_loss(pred[0] if mo else pred, target)
+        return total_loss

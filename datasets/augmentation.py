@@ -11,6 +11,7 @@ Description:
 
 import os
 import cv2
+import random
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -24,28 +25,88 @@ OUTPUT_DIR = "./outputs"
 
 
 class RealBlurAugmentation:
-    def __init__(self):
-        self.transform = A.Compose([
-            # ----------------- Geometry Transforms ----------------- #
-            A.HorizontalFlip(p=0.5),
-            A.VerticalFlip(p=0.5),
-            A.SafeRotate(limit=90, p=0.5),
-            # A.RandomResizedCrop(
-            #     size=(img_size[0], img_size[1]),
-            #     scale=(0.9, 1.0), ratio=(2.0, 2.0), p=0.5
-            # ),
+    # def __init__(self):
+    #     self.transform = A.Compose([
+    #         A.HorizontalFlip(p=0.5),
+    #         A.VerticalFlip(p=0.5),
+    #         # A.RandomRotate90(p=1.0)
+    #     ], additional_targets={"gt": "image"})
 
-            # # ----------------- Color Transforms ----------------- #
-            # A.RandomBrightnessContrast(p=0.5),
-            # A.HueSaturationValue(p=0.5),
+    # def __call__(self, image: np.ndarray, gt: np.ndarray):
+    #     augmented = self.transform(image=image, gt=gt)
+    #     return augmented["image"], augmented["gt"]
 
-            # # ----------------- Noise Transforms ----------------- #
-            # A.GaussNoise(std_range=(0.05, 0.2), p=0.3)
-        ], additional_targets={"gt": "image"})
+    def __call__(
+        self, image, gt,
+        hflip=True, rotation=True, flows=None, return_status=False, vflip=False
+    ):
+        """Augment: horizontal flips OR rotate (0, 90, 180, 270 degrees).
 
-    def __call__(self, image: np.ndarray, gt: np.ndarray):
-        augmented = self.transform(image=image, gt=gt)
-        return augmented["image"], augmented["gt"]
+        We use vertical flip and transpose for rotation implementation.
+        All the images in the list use the same augmentation.
+
+        Args:
+            imgs (list[ndarray] | ndarray): Images to be augmented. If the input
+                is an ndarray, it will be transformed to a list.
+            hflip (bool): Horizontal flip. Default: True.
+            rotation (bool): Ratotation. Default: True.
+            flows (list[ndarray]: Flows to be augmented. If the input is an
+                ndarray, it will be transformed to a list.
+                Dimension is (h, w, 2). Default: None.
+            return_status (bool): Return the status of flip and rotation.
+                Default: False.
+
+        Returns:
+            list[ndarray] | ndarray: Augmented images and flows. If returned
+                results only have one element, just return ndarray.
+        """
+        imgs = [image, gt]
+        hflip = hflip and random.random() < 0.5
+        if vflip or rotation:
+            vflip = random.random() < 0.5
+        rot90 = rotation and random.random() < 0.5
+
+        def _augment(img):
+            if hflip:  # horizontal
+                cv2.flip(img, 1, img)
+                if img.shape[2] == 6:
+                    img = img[:,:,[3,4,5,0,1,2]].copy() # swap left/right
+            if vflip:  # vertical
+                cv2.flip(img, 0, img)
+            if rot90:
+                img = img.transpose(1, 0, 2)
+            return img
+
+        def _augment_flow(flow):
+            if hflip:  # horizontal
+                cv2.flip(flow, 1, flow)
+                flow[:, :, 0] *= -1
+            if vflip:  # vertical
+                cv2.flip(flow, 0, flow)
+                flow[:, :, 1] *= -1
+            if rot90:
+                flow = flow.transpose(1, 0, 2)
+                flow = flow[:, :, [1, 0]]
+            return flow
+
+        if not isinstance(imgs, list):
+            imgs = [imgs]
+        imgs = [_augment(img) for img in imgs]
+        if len(imgs) == 1:
+            imgs = imgs[0]
+
+        if flows is not None:
+            if not isinstance(flows, list):
+                flows = [flows]
+            flows = [_augment_flow(flow) for flow in flows]
+            if len(flows) == 1:
+                flows = flows[0]
+            return imgs, flows
+        else:
+            if return_status:
+                return imgs, (hflip, vflip, rot90)
+            else:
+                return imgs
 
 
 def show_transformed_samples(

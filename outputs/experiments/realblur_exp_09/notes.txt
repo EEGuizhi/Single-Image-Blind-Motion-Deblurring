@@ -1,0 +1,5 @@
+Change:
+    - 完全仿照 FFTformer
+
+Result:
+

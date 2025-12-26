@@ -26,10 +26,10 @@ class Optimizer:
             torch.optim.Optimizer: Initialized optimizer.
         """
         if optimizer_name == 'AdamW':
-            return torch.optim.AdamW(parameters, lr=learning_rate, weight_decay=1e-4, betas=(0.9, 0.999))
+            return torch.optim.AdamW(parameters, lr=learning_rate, weight_decay=1e-3, betas=(0.9, 0.9))
         elif optimizer_name == 'Adam':
-            return torch.optim.Adam(parameters, lr=learning_rate, betas=(0.9, 0.999))
+            return torch.optim.Adam(parameters, lr=learning_rate, betas=(0.9, 0.9))
         elif optimizer_name == 'SGD':
-            return torch.optim.SGD(parameters, lr=learning_rate, momentum=0.9, weight_decay=1e-4)
+            return torch.optim.SGD(parameters, lr=learning_rate, momentum=0.9, weight_decay=1e-3)
         else:
             raise ValueError(f"Unsupported optimizer: {optimizer_name}")
