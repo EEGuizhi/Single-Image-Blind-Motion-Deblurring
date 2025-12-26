@@ -168,7 +168,7 @@ if __name__ == "__main__":
         + f"/report"
         + f"_{MODEL_NAME}"
         + f"_d{MODEL_DIM}"
-        + f"_{IMG_SIZE[0]}_{OVERLAP[0]}" if ORIG_SIZE is False else f"_OrigSize"
+        + (f"_{IMG_SIZE[0]}_{OVERLAP[0]}" if ORIG_SIZE is False else f"_OrigSize")
         + ".txt"
     )
     log = logger(LOG_PATH)
