@@ -12,12 +12,17 @@ datasets/
 │   ├── ...
 │   ├── RealBlur_R_train_list.txt                          (Train list in RealBlur-J dataset)
 │   └── RealBlur_R_train_list.json                         (Generated from preprocess.py)
+├── gopro/
+│   ├── test/                                              (GoPro test set)
+│   ├── train/                                             (GoPro train set)
+│   ├── download_utils.py                                  (Used to download GoPro dataset)
+│   └── ...
 ├── augmentation.py  (Custom data augmentation for training)
 └── dataset.py       (Custom dataset for training and testing)
 ```
 
 ### **Archive Introduction**
-- `download_utils.py`：可以用來下載 RealBlur Dataset。
+- `download_utils.py`：可以用來下載 RealBlur 或 GoPro Dataset。
 
 - `augmentation.py`：訓練時所使用的自訂義 Data Augmentation。
 
@@ -25,7 +30,7 @@ datasets/
 
 ### **Notes**
 - 如果 `realblur` 資料夾裡面沒有像上方描述的那些檔案，代表你還沒有下載 RealBlur Dataset，
-  請使用 `download_utils.py` 將檔案下載到該處並解壓縮。
+  請使用 `realblur/download_utils.py` 將檔案下載到該處並解壓縮。 (GoPro Dataset 同理)
 
 - 若缺少如 `RealBlur_J_test_list.json` 等 `.json` 檔案代表還沒有前處理過資料集，
-  請使用根目錄的 `preprocess.py` 來生成 `dataset.py` 運作時所需的那些 `.json` 檔案。
+  請使用根目錄的 `preprocess.py` 來生成 `dataset.py` 運作時所需的那些 `.json` 檔案。 (GoPro Dataset 同理)

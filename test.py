@@ -103,7 +103,7 @@ def test(
                 patches_cnt += inputs.size(0)
 
             # Evaluate and save predictions
-            if patches_cnt == n_patches or ORIG_SIZE:
+            if ORIG_SIZE or patches_cnt == n_patches:
                 # Combine patches if all patches are collected
                 if not ORIG_SIZE:
                     full_image_size = (
@@ -165,7 +165,7 @@ if __name__ == "__main__":
     # Logger setup
     LOG_PATH = (
         f"{OUTPUT_DIR}/reports"
-        + f"/report"
+        + f"/reportTMP"
         + f"_{MODEL_NAME}"
         + f"_d{MODEL_DIM}"
         + (f"_{IMG_SIZE[0]}_{OVERLAP[0]}" if ORIG_SIZE is False else f"_OrigSize")

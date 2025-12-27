@@ -268,3 +268,52 @@ Epoch [156/320] | Train Loss: 0.249958 | Val Loss: 0.252886 | Val PSNR: 31.02808
 Epoch [157/320] | Train Loss: 0.249555 | Val Loss: 0.252886 | Val PSNR: 31.028083 | Val SSIM: 0.896434 | Learning Rate: 0.000206 | Epoch Time: 638.369798 
 Epoch [158/320] | Train Loss: 0.250732 | Val Loss: 0.252886 | Val PSNR: 31.028083 | Val SSIM: 0.896434 | Learning Rate: 0.000204 | Epoch Time: 638.301256 
 Epoch [159/320] | Train Loss: 0.249625 | Val Loss: 0.252886 | Val PSNR: 31.028083 | Val SSIM: 0.896434 | Learning Rate: 0.000202 | Epoch Time: 638.290725 
+
+# --------------------------------- Resuming Training --------------------------------- #
+
+>> Starting Model Training
+Start Time: Fri Dec 26 21:25:10 2025
+
+Current working directory: /home/bschen/Single-Image-Blind-Motion-Deblurring
+>> Training Configuration:
+    - model_name: FFTformer
+    - model_dim: 48
+    - patch_size: (256, 256)
+    - overlap: (64, 64)
+    - augmentation: True
+    - rand_crop: True
+    - num_epochs: 320
+    - batch_size: 1
+    - accum_iter: 4
+    - learning_rate: 0.0004
+    - simo_loss: False
+    - edge_loss: True
+    - l1_loss: False
+    - mse_loss: False
+    - fft_loss: True
+    - optimizer: AdamW
+    - scheduler: CosineAnnealingLR
+    - metric: PSNR
+    - val_interval: 10
+    - checkpoint: /home/bschen/Single-Image-Blind-Motion-Deblurring/outputs/experiments/realblur_exp_09/FFTformer_d48.pth
+    - weight_only: False
+    - num_workers: 8
+
+Model initialized with 16560474 parameters
+Training on device: cuda
+
+Resumed training from checkpoint at epoch 159
+
+Epoch [160/320] | Train Loss: 0.232011 | Val Loss: 0.231091 | Val PSNR: 31.039719 | Val SSIM: 0.896341 | Learning Rate: 0.000200 | Epoch Time: 1095.852895 
+>> Best model saved with PSNR: 31.03972
+
+Epoch [161/320] | Train Loss: 0.230181 | Val Loss: 0.231091 | Val PSNR: 31.039719 | Val SSIM: 0.896341 | Learning Rate: 0.000198 | Epoch Time: 638.046483 
+Epoch [162/320] | Train Loss: 0.231364 | Val Loss: 0.231091 | Val PSNR: 31.039719 | Val SSIM: 0.896341 | Learning Rate: 0.000196 | Epoch Time: 638.100399 
+Epoch [163/320] | Train Loss: 0.231735 | Val Loss: 0.231091 | Val PSNR: 31.039719 | Val SSIM: 0.896341 | Learning Rate: 0.000194 | Epoch Time: 638.766708 
+Epoch [164/320] | Train Loss: 0.229301 | Val Loss: 0.231091 | Val PSNR: 31.039719 | Val SSIM: 0.896341 | Learning Rate: 0.000192 | Epoch Time: 638.693195 
+Epoch [165/320] | Train Loss: 0.232805 | Val Loss: 0.231091 | Val PSNR: 31.039719 | Val SSIM: 0.896341 | Learning Rate: 0.000190 | Epoch Time: 638.773241 
+Epoch [166/320] | Train Loss: 0.231346 | Val Loss: 0.231091 | Val PSNR: 31.039719 | Val SSIM: 0.896341 | Learning Rate: 0.000188 | Epoch Time: 638.510777 
+Epoch [167/320] | Train Loss: 0.228641 | Val Loss: 0.231091 | Val PSNR: 31.039719 | Val SSIM: 0.896341 | Learning Rate: 0.000186 | Epoch Time: 638.630521 
+Epoch [168/320] | Train Loss: 0.230155 | Val Loss: 0.231091 | Val PSNR: 31.039719 | Val SSIM: 0.896341 | Learning Rate: 0.000184 | Epoch Time: 638.884687 
+Epoch [169/320] | Train Loss: 0.229507 | Val Loss: 0.231091 | Val PSNR: 31.039719 | Val SSIM: 0.896341 | Learning Rate: 0.000182 | Epoch Time: 638.852839 
+Epoch [170/320] | Train Loss: 0.229830 | Val Loss: 0.231679 | Val PSNR: 31.018357 | Val SSIM: 0.895457 | Learning Rate: 0.000180 | Epoch Time: 1097.743597 

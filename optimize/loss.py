@@ -14,6 +14,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from functools import partial
 
 from optimize.loss_util import weighted_loss
 
@@ -103,28 +104,26 @@ class SIMOLoss(nn.Module):
         assert reduction == 'mean'
         self.loss_weight = loss_weight
         self.scale = 10 / np.log(10)
-        self.resize_kwargs = dict(mode='area', recompute_scale_factor=True)
+        # self.resize_kwargs = dict(mode='area', recompute_scale_factor=True)
+        self.resize = partial(F.interpolate, mode='area', recompute_scale_factor=True)
         self.eps = eps
 
     def forward(self, batch_p: list[torch.Tensor], batch_l: torch.Tensor) -> torch.Tensor:
-        loss = self.loss_weight * self.scale * torch.log(
-            ((batch_p[0] - batch_l) ** 2).mean(dim=(1, 2, 3)) + self.eps
-        ).mean()
+        loss = self.loss_weight * self.scale * torch.log((
+            (batch_p[0] - batch_l) ** 2
+        ).mean(dim=(1, 2, 3)) + self.eps).mean()
 
-        loss += 0.5 * self.loss_weight * self.scale * torch.log(
-            ((batch_p[1] - F.interpolate(batch_l, scale_factor=0.5, **self.resize_kwargs)) ** 2)
-            .mean(dim=(1, 2, 3)) + self.eps
-        ).mean()
+        loss += 0.5 * self.loss_weight * self.scale * torch.log((
+            (batch_p[1] - self.resize(input=batch_l, scale_factor=0.5)) ** 2
+        ).mean(dim=(1, 2, 3)) + self.eps).mean()
 
-        loss += 0.25 * self.loss_weight * self.scale * torch.log(
-            ((batch_p[2] - F.interpolate(batch_l, scale_factor=0.25, **self.resize_kwargs)) ** 2)
-            .mean(dim=(1, 2, 3)) + self.eps
-        ).mean()
+        loss += 0.25 * self.loss_weight * self.scale * torch.log((
+            (batch_p[2] - self.resize(input=batch_l, scale_factor=0.25)) ** 2
+        ).mean(dim=(1, 2, 3)) + self.eps).mean()
 
-        loss += 0.125 * self.loss_weight * self.scale * torch.log(
-            ((batch_p[3] - F.interpolate(batch_l, scale_factor=0.125, **self.resize_kwargs)) ** 2)
-            .mean(dim=(1, 2, 3)) + self.eps
-        ).mean()
+        loss += 0.125 * self.loss_weight * self.scale * torch.log((
+            (batch_p[3] - self.resize(input=batch_l, scale_factor=0.125)) ** 2
+        ).mean(dim=(1, 2, 3)) + self.eps).mean()
 
         return loss
 

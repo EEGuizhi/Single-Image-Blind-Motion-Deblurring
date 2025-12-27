@@ -1,5 +1,5 @@
 >> Starting Model Testing
-Start Time: Sat Dec 27 14:38:15 2025
+Start Time: Sat Dec 27 15:17:54 2025
 
 Current working directory: /home/bschen/Single-Image-Blind-Motion-Deblurring
 Model Weights Path: /home/bschen/Single-Image-Blind-Motion-Deblurring/pretrain_weights/FFTformer_d48.pth
@@ -11,15 +11,15 @@ Model Weights Path: /home/bschen/Single-Image-Blind-Motion-Deblurring/pretrain_w
     - batch_size: 1
     - patch_size: (256, 256)
     - overlap: (128, 128)
-    - orig_size: False
-    - factor: 16
+    - orig_size: True
+    - factor: 128
     - ecc_iters: 50
     - num_workers: 8
     - save_outputs: False
     - show_image_indices: [3, 8, 18]
 
-Average PSNR: 31.75722 dB
-Average SSIM: 0.92060
+Average PSNR: 31.74532 dB
+Average SSIM: 0.92087
 
-End Time: Sat Dec 27 15:09:38 2025
-Total Elapsed Time: 31.386 minutes
+End Time: Sat Dec 27 15:38:11 2025
+Total Elapsed Time: 20.290 minutes

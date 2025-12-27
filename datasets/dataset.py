@@ -162,7 +162,7 @@ class RealBlurDataset(Dataset):
                 self._cache.popitem(last=False)
             self._cache[img_idx] = (blur_img, gt_img)
 
-        return blur_img, gt_img
+        return blur_img.copy(), gt_img.copy()
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor, int]:
         # Load blur and ground-truth images

@@ -1,13 +1,25 @@
 >> Starting Model Testing
-Start Time: Thu Dec 18 22:06:13 2025
+Start Time: Sat Dec 27 14:33:36 2025
 
 Current working directory: /home/bschen/Single-Image-Blind-Motion-Deblurring
-Model Weights Path: /home/bschen/Single-Image-Blind-Motion-Deblurring/pretrain_weights/MLWNet_d32.pth
+Model Weights Path: /home/bschen/Single-Image-Blind-Motion-Deblurring/pretrain_weights/MLWNet_d32_best.pth
 
-Image Size: (512, 512), Overlap: (256, 256)
-Show Image Indices: [3, 8, 18]
-Average PSNR: 31.97137 dB
-Average SSIM: 0.91705
+>> Testing Configuration:
+    - model_name: MLWNet_Local
+    - model_dim: 32
+    - weights_path: /home/bschen/Single-Image-Blind-Motion-Deblurring/pretrain_weights/MLWNet_d32_best.pth
+    - batch_size: 1
+    - patch_size: (512, 512)
+    - overlap: (256, 256)
+    - orig_size: False
+    - factor: 16
+    - ecc_iters: 50
+    - num_workers: 8
+    - save_outputs: False
+    - show_image_indices: [3, 8, 18]
 
-End Time: Thu Dec 18 22:21:22 2025
-Total Elapsed Time: 15.161 minutes
+Average PSNR: 32.12404 dB
+Average SSIM: 0.92046
+
+End Time: Sat Dec 27 15:08:31 2025
+Total Elapsed Time: 34.920 minutes

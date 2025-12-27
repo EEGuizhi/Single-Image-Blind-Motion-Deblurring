@@ -1,5 +1,5 @@
 >> Starting Model Testing
-Start Time: Sat Dec 27 18:16:02 2025
+Start Time: Sat Dec 27 18:01:41 2025
 
 Current working directory: /home/bschen/Single-Image-Blind-Motion-Deblurring
 Model Weights Path: /home/bschen/Single-Image-Blind-Motion-Deblurring/pretrain_weights/HybridNet_d32.pth
@@ -9,17 +9,17 @@ Model Weights Path: /home/bschen/Single-Image-Blind-Motion-Deblurring/pretrain_w
     - model_dim: 32
     - weights_path: /home/bschen/Single-Image-Blind-Motion-Deblurring/pretrain_weights/HybridNet_d32.pth
     - batch_size: 1
-    - patch_size: (256, 256)
-    - overlap: (128, 128)
-    - orig_size: False
+    - patch_size: (512, 512)
+    - overlap: (256, 256)
+    - orig_size: True
     - factor: 128
     - ecc_iters: 50
     - num_workers: 8
     - save_outputs: False
     - show_image_indices: [3, 8, 18]
 
-Average PSNR: 31.80117 dB
-Average SSIM: 0.92110
+Average PSNR: 31.50054 dB
+Average SSIM: 0.91809
 
-End Time: Sat Dec 27 18:32:32 2025
-Total Elapsed Time: 16.500 minutes
+End Time: Sat Dec 27 18:14:00 2025
+Total Elapsed Time: 12.316 minutes

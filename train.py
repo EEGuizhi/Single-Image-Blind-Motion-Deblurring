@@ -269,6 +269,7 @@ if __name__ == "__main__":
     scheduler = Scheduler.get_scheduler(
         SCHEDULER, optimizer, mode='max',  # PSNR is to be maximized
         T_max=NUM_EPOCHS * iter_per_epoch // ACCUM_ITER,
+        eta_min=getattr(TRAIN_CONFIG, 'min_lr', 1e-7)
     )
 
     # Load checkpoint if provided
