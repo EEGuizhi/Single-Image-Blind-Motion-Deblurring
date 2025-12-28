@@ -625,4 +625,6 @@ Params size (MB): 59.66
 Estimated Total Size (MB): 17555.41
 ======================================================================================================================================================
 
+>> Average Inference Time over 100 iterations: 47.898 ms
+
 >> Summary saved to /home/bschen/Single-Image-Blind-Motion-Deblurring/outputs/summaries/summary_FFTformer_d48.txt

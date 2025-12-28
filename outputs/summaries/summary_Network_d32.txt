@@ -489,4 +489,6 @@ Params size (MB): 81.27
 Estimated Total Size (MB): 2160.91
 ======================================================================================================================================================
 
->> Summary saved to /home/bschen/Single-Image-Blind-Motion-Deblurring/outputs/summary_Network_d32.txt
+>> Average Inference Time over 100 iterations: 10.184 ms
+
+>> Summary saved to /home/bschen/Single-Image-Blind-Motion-Deblurring/outputs/summaries/summary_Network_d32.txt

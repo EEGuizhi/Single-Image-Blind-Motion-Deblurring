@@ -165,7 +165,7 @@ if __name__ == "__main__":
     # Logger setup
     LOG_PATH = (
         f"{OUTPUT_DIR}/reports"
-        + f"/reportTMP"
+        + f"/report"
         + f"_{MODEL_NAME}"
         + f"_d{MODEL_DIM}"
         + (f"_{IMG_SIZE[0]}_{OVERLAP[0]}" if ORIG_SIZE is False else f"_OrigSize")

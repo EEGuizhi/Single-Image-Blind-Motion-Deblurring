@@ -542,4 +542,6 @@ Params size (MB): 60.89
 Estimated Total Size (MB): 3718.62
 ======================================================================================================================================================
 
+>> Average Inference Time over 100 iterations: 12.490 ms
+
 >> Summary saved to /home/bschen/Single-Image-Blind-Motion-Deblurring/outputs/summaries/summary_HybridNet_d32.txt
