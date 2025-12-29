@@ -98,6 +98,9 @@ def predict(
     orig_h, orig_w = image_rgb.shape[:2]
     print(f"[Predict] Image size: {orig_h} x {orig_w}")
 
+    image_mean = torch.from_numpy(np.mean(image_rgb, axis=(0, 1), keepdims=True)).float() / 255.0
+    image_mean = image_mean.permute(2, 0, 1)
+
     # Split image into patches
     print(f"[Predict] Splitting image into patches (size={patch_size}, overlap={overlap})...")
     patches, positions = split_image_to_patches(image_rgb, patch_size, overlap)
@@ -112,7 +115,7 @@ def predict(
     with torch.no_grad():
         for i in tqdm(range(0, len(patches), batch_size), desc="Processing patches"):
             # Get batch of patches
-            batch_patches = patches[i:i+batch_size]
+            batch_patches = patches[i : i+batch_size]
 
             # Convert to tensor and normalize
             batch_tensor = []
@@ -123,7 +126,9 @@ def predict(
             batch_tensor = torch.stack(batch_tensor, dim=0).to(device)
 
             # Forward pass
+            batch_tensor /= SCALE
             model_outputs = model(batch_tensor)
+            model_outputs *= SCALE
             outputs = model_outputs[0] if isinstance(model_outputs, (list, tuple)) else model_outputs
 
             # Store results
@@ -137,6 +142,7 @@ def predict(
 
     full_size = (orig_h, orig_w)
     combined_output = combine_patches_torch(output_patches_tensor, full_size, positions_tensor)
+    combined_output = combined_output / combined_output.mean(dim=(1, 2), keepdim=True) * image_mean
     combined_output = torch.clamp(combined_output, 0.0, 1.0)
 
     # Convert to numpy and save
@@ -166,6 +172,7 @@ if __name__ == "__main__":
     OVERLAP     = PREDICT_CONFIG.get('overlap', (128, 128))
     BATCH_SIZE  = PREDICT_CONFIG.get('batch_size', 4)
     DEVICE_STR  = PREDICT_CONFIG.get('device', 'cuda')
+    SCALE       = 1.0
 
     # Setup
     device = torch.device(DEVICE_STR if torch.cuda.is_available() else 'cpu')
