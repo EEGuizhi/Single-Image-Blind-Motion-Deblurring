@@ -37,34 +37,35 @@ CACHE_SIZE = 1000
 
 
 # ------------------------------- Training Configurations ------------------------------- #
-EXPERIMENT_DIR = f"{OUTPUT_DIR}/experiments/realblur_exp_10-1"
+EXPERIMENT_DIR = f"{OUTPUT_DIR}/experiments/realblur_exp_11"
 TRAIN_CONFIG = {
     ### Models: 'MLWNet_Local', 'MLWNet', 'FFTformer', 'Network', 'HybridNet' ###
-    
-    'model_name': 'HybridNet',   # Options: 'MLWNet_Local', 'MLWNet', 'FFTformer', 'Network'
+
+    'model_name': 'Network',   # Options: 'MLWNet_Local', 'MLWNet', 'FFTformer', 'Network'
     'model_dim': 32,           # Options: 32, 48, 64
     'patch_size': (256, 256),  # (H, W)
     'overlap': (64, 64),       # (H_overlap, W_overlap)
 
     'augmentation': True,
     'rand_crop': True,
-    'num_epochs': 200,
+    'num_epochs': 2000,
     'batch_size': 8,
     'accum_iter': 1,
-    'learning_rate': 1e-5,
+    'learning_rate': 9e-4,
+    'min_lr': 1e-7,
 
-    'simo_loss': False,
+    'simo_loss': True,
     'edge_loss': False,
-    'l1_loss': True,
+    'l1_loss': False,
     'mse_loss': False,
-    'fft_loss': True,
+    'fft_loss': False,
 
     'optimizer': 'AdamW',
     'scheduler': 'CosineAnnealingLR',  # Options: 'StepLR', 'CosineAnnealingLR', 'ReduceLROnPlateau'
     'metric': 'PSNR',                  # Options: 'PSNR', 'SSIM'
 
     'val_interval': 10,
-    'checkpoint': f"{EXPERIMENT_DIR}/HybridNet_d32.pth",
+    'checkpoint': f"{EXPERIMENT_DIR}/Network_d32.pth",
     'weight_only': True,
     'num_workers': 8,
 }
@@ -76,25 +77,26 @@ TEST_CONFIG = {
 
     # 'model_name': 'MLWNet',
     # 'model_dim': 32,               # Options: 32, 64
-    # 'weights_path': f"{ROOT_DIR}/pretrain_weights/MLWNet_d32.pth",
+    # 'weights_path': f"{ROOT_DIR}/outputs/experiments/realblur_exp_06/MLWNet_d32.pth",
 
-    # 'model_name': 'Network',
-    # 'model_dim': 32,               # Options: 32, 64
+    'model_name': 'Network',
+    'model_dim': 32,               # Options: 32, 64
     # 'weights_path': f"{ROOT_DIR}/pretrain_weights/Network_d32.pth",
+    'weights_path': f"{ROOT_DIR}/outputs/experiments/realblur_exp_11/Network_d32.pth",
 
     # 'model_name': 'FFTformer',
     # 'model_dim': 48,               # Options: 48
-    # 'weights_path': f"{EXPERIMENT_DIR}/FFTformer_d48.pth",
+    # 'weights_path': f"{ROOT_DIR}/pretrain_weights/FFTformer_d48.pth",
 
-    'model_name': 'HybridNet',
-    'model_dim': 32,               # Options: 32
-    'weights_path': f"{ROOT_DIR}/pretrain_weights/HybridNet_d32.pth",
+    # 'model_name': 'HybridNet',
+    # 'model_dim': 32,               # Options: 32
+    # 'weights_path': f"{ROOT_DIR}/pretrain_weights/HybridNet_d32.pth",
 
     'batch_size': 1,
     'patch_size': (256, 256),  # (H, W)
     'overlap': (128, 128),     # (H_overlap, W_overlap)
     'orig_size': False,        # Use original image size for testing
-    'factor': 16,              # Factor to pad image size to be divisible by this number
+    'factor': 128,             # Factor to pad image size to be divisible by this number
 
     'ecc_iters': 50,
     'num_workers': 8,
@@ -105,7 +107,7 @@ TEST_CONFIG = {
 
 # --------------------------------- Summary Configuration --------------------------------- #
 SUMMARY_CONFIG = {
-    'model_name': 'HybridNet',   # Options: 'MLWNet_Local', 'FFTformer', 'Network', 'HybridNet'
+    'model_name': 'Network',   # Options: 'MLWNet_Local', 'FFTformer', 'Network', 'HybridNet'
     'model_dim': 32,           # Options: 32, 48, 64
     'patch_size': (256, 256),  # (H, W)
 }
@@ -113,15 +115,21 @@ SUMMARY_CONFIG = {
 
 # --------------------------------- Predict Configuration --------------------------------- #
 PREDICT_CONFIG = {
+    ### Models: 'MLWNet_Local', 'MLWNet', 'FFTformer', 'Network', 'HybridNet' ###
     'model_name': 'Network',
-    'model_dim': 32,
-    'weights_path': f"{ROOT_DIR}/pretrain_weights/Network_d32_best.pth",
-    'input_path': f"{ROOT_DIR}/predict_pictures/blur/1.png",
-    'output_path': f"{ROOT_DIR}/predict_pictures/sharp/1_sharp.png",
+    'model_dim': 32,               # Options: 48
+    'weights_path': f"{ROOT_DIR}/pretrain_weights/submit/Network_d32.pth",
+
+    'input_dir': f"{ROOT_DIR}/predict_pictures/blur/",
+    'output_dir': f"{ROOT_DIR}/predict_pictures/sharp/",
+    
+    'predict_single_image': True,
+    'input_path': f"{ROOT_DIR}/predict_pictures/blur/test_03.jpg",
+    'output_path': f"{ROOT_DIR}/predict_pictures/sharp/sharp_test_03.png",
 
     # Inference settings
     'patch_size': (512, 512),
     'overlap': (256, 256),
-    'batch_size': 4,
+    'batch_size': 1,
     'device': 'cuda',
 }
