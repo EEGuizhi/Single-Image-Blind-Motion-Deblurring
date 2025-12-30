@@ -93,8 +93,8 @@ TEST_CONFIG = {
     # 'weights_path': f"{ROOT_DIR}/pretrain_weights/HybridNet_d32.pth",
 
     'batch_size': 1,
-    'patch_size': (256, 256),  # (H, W)
-    'overlap': (128, 128),     # (H_overlap, W_overlap)
+    'patch_size': (512, 512),  # (H, W)
+    'overlap': (256, 256),     # (H_overlap, W_overlap)
     'orig_size': False,        # Use original image size for testing
     'factor': 128,             # Factor to pad image size to be divisible by this number
 
@@ -118,14 +118,14 @@ PREDICT_CONFIG = {
     ### Models: 'MLWNet_Local', 'MLWNet', 'FFTformer', 'Network', 'HybridNet' ###
     'model_name': 'Network',
     'model_dim': 32,               # Options: 48
-    'weights_path': f"{ROOT_DIR}/pretrain_weights/submit/Network_d32.pth",
+    'weights_path': f"{ROOT_DIR}/pretrain_weights/Network_d32.pth",
 
     'input_dir': f"{ROOT_DIR}/predict_pictures/blur/",
     'output_dir': f"{ROOT_DIR}/predict_pictures/sharp/",
     
-    'predict_single_image': True,
-    'input_path': f"{ROOT_DIR}/predict_pictures/blur/test_03.jpg",
-    'output_path': f"{ROOT_DIR}/predict_pictures/sharp/sharp_test_03.png",
+    'predict_single_image': False,
+    'input_path': f"{ROOT_DIR}/predict_pictures/blur/demo_03.jpg",
+    'output_path': f"{ROOT_DIR}/predict_pictures/sharp/Network_demo_03.jpg",
 
     # Inference settings
     'patch_size': (512, 512),

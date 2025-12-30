@@ -126,10 +126,10 @@ def predict(
             batch_tensor = torch.stack(batch_tensor, dim=0).to(device)
 
             # Forward pass
-            batch_tensor /= SCALE
+            batch_tensor = batch_tensor / SCALE
             model_outputs = model(batch_tensor)
-            model_outputs *= SCALE
             outputs = model_outputs[0] if isinstance(model_outputs, (list, tuple)) else model_outputs
+            outputs = outputs * SCALE
 
             # Store results
             for j in range(outputs.size(0)):
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     OVERLAP     = PREDICT_CONFIG.get('overlap', (128, 128))
     BATCH_SIZE  = PREDICT_CONFIG.get('batch_size', 4)
     DEVICE_STR  = PREDICT_CONFIG.get('device', 'cuda')
-    SCALE       = 1.0
+    SCALE       = 1.1
 
     # Setup
     device = torch.device(DEVICE_STR if torch.cuda.is_available() else 'cpu')
